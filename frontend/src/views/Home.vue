@@ -16,21 +16,23 @@
       <section class="hero-section">
         <div class="hero-left">
           <div class="tag-row">
-            <span class="accent-tag">Swarm Intelligence Engine</span>
-            <span class="version-text">/ v0.1 preview</span>
+            <span class="accent-tag">Predictive Intelligence Platform</span>
           </div>
           
           <h1 class="main-title">
-            Upload any report.<br>
-            <span class="gradient-text">Forecast the future.</span>
+            See what happens<br>
+            <span class="gradient-text">before it happens.</span>
           </h1>
           
           <div class="hero-desc">
             <p>
-              Even from a single document, <span class="highlight-bold">LangSync Forecast</span> extracts real-world seeds and auto-generates a parallel world of up to <span class="highlight-accent">millions of agents</span>. Inject variables from a god's-eye view and discover <span class="highlight-code">"local optima"</span> through complex swarm interactions.
+              <span class="highlight-bold">LangSync Forecast</span> scans thousands of opinion pieces, news sources, and public sentiment signals — both historic and live — to build a complete picture of how people think, react, and influence each other. It then generates <span class="highlight-accent">thousands of realistic personas</span> and simulates how they would respond to any scenario you define.
+            </p>
+            <p>
+              The result is a powerful, full-spectrum view of public reaction — from early signals to viral cascades — giving you the intelligence to <span class="highlight-code">navigate the future with confidence</span>.
             </p>
             <p class="slogan-text">
-              Let agents rehearse the future. Let decisions win after a thousand battles<span class="blinking-cursor">_</span>
+              Transform how you see and navigate what comes next<span class="blinking-cursor">_</span>
             </p>
           </div>
            
@@ -39,7 +41,7 @@
         
         <div class="hero-right">
           <div class="logo-container">
-            <img src="../assets/logo/langsync-horizontal.png" alt="LangSync" class="hero-logo" />
+            <img src="../assets/logo/langsync-mark.png" alt="LangSync" class="hero-logo" />
           </div>
           
           <button class="scroll-down-btn" @click="scrollToBottom">
@@ -56,17 +58,17 @@
           
           <h2 class="section-title">Ready</h2>
           <p class="section-desc">
-            Prediction engine standing by. Upload unstructured data to initialise a simulation sequence.
+            Upload documents, reports, or briefs — the engine will build a predictive model and simulate real-world reactions at scale.
           </p>
           
           <div class="metrics-row">
             <div class="metric-card">
-              <div class="metric-value">Low Cost</div>
-              <div class="metric-label">~$5 per standard simulation</div>
+              <div class="metric-value">1000s</div>
+              <div class="metric-label">Unique personas generated per run</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">Scalable</div>
-              <div class="metric-label">Up to 1M agent simulations</div>
+              <div class="metric-value">Real-time</div>
+              <div class="metric-label">Live &amp; historic sentiment tracked</div>
             </div>
           </div>
 
@@ -78,36 +80,36 @@
               <div class="workflow-item">
                 <span class="step-num">01</span>
                 <div class="step-info">
-                  <div class="step-title">Graph Build</div>
-                  <div class="step-desc">Seed extraction, memory injection &amp; GraphRAG construction</div>
+                  <div class="step-title">Intelligence Mapping</div>
+                  <div class="step-desc">Your documents are analysed to extract key entities, relationships, and context</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">02</span>
                 <div class="step-info">
-                  <div class="step-title">Environment Setup</div>
-                  <div class="step-desc">Entity extraction, agent persona generation &amp; simulation parameters</div>
+                  <div class="step-title">Persona Generation</div>
+                  <div class="step-desc">Thousands of realistic profiles are created with diverse backgrounds and viewpoints</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">03</span>
                 <div class="step-info">
-                  <div class="step-title">Run Simulation</div>
-                  <div class="step-desc">Dual-platform parallel simulation with dynamic memory updates</div>
+                  <div class="step-title">Scenario Simulation</div>
+                  <div class="step-desc">Personas interact across simulated platforms, forming opinions and driving narratives</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">04</span>
                 <div class="step-info">
-                  <div class="step-title">Generate Report</div>
-                  <div class="step-desc">ReportAgent analyses simulation data with specialised tools</div>
+                  <div class="step-title">Predictive Report</div>
+                  <div class="step-desc">AI analyses the simulation to produce actionable intelligence and forecasts</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">05</span>
                 <div class="step-info">
                   <div class="step-title">Deep Interaction</div>
-                  <div class="step-desc">Chat with any agent in the simulation or the ReportAgent</div>
+                  <div class="step-desc">Interrogate any persona, run surveys, or explore specific narratives in detail</div>
                 </div>
               </div>
             </div>
@@ -168,7 +170,7 @@
                 <textarea
                   v-model="formData.simulationRequirement"
                   class="code-input"
-                  placeholder="// Describe your simulation or prediction scenario in natural language"
+                  placeholder="// Describe the scenario you want to forecast — e.g. 'How would the public react if our client announced...'"
                   rows="6"
                   :disabled="loading"
                 ></textarea>
@@ -485,14 +487,14 @@ const startSimulation = () => {
 .logo-container {
   width: 100%;
   display: flex;
-  justify-content: flex-end;
-  padding-right: 40px;
+  justify-content: center;
+  align-items: center;
 }
 
 .hero-logo {
-  max-width: 420px;
+  max-width: 280px;
   width: 100%;
-  border-radius: 12px;
+  object-fit: contain;
 }
 
 .scroll-down-btn {
@@ -855,7 +857,7 @@ const startSimulation = () => {
   }
   
   .hero-logo {
-    max-width: 200px;
+    max-width: 160px;
   }
 }
 </style>
