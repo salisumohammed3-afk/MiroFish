@@ -27,10 +27,16 @@ class Config:
     # JSON configuration - disable ASCII escaping so non-ASCII characters display directly (instead of \uXXXX format)
     JSON_AS_ASCII = False
     
-    # LLM configuration (unified OpenAI format)
+    # LLM configuration (unified OpenAI format) — used for simulation, profiles, ontology
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    
+    # Report-specific LLM (optional) — higher-quality model for report generation only
+    # Falls back to main LLM config if not set
+    REPORT_LLM_API_KEY = os.environ.get('REPORT_LLM_API_KEY')
+    REPORT_LLM_BASE_URL = os.environ.get('REPORT_LLM_BASE_URL')
+    REPORT_LLM_MODEL_NAME = os.environ.get('REPORT_LLM_MODEL_NAME')
     
     # Zep configuration
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')

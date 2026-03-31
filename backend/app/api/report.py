@@ -14,9 +14,26 @@ from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.simulation_manager import SimulationManager
 from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
+from ..utils.llm_client import LLMClient
+from ..services.zep_tools import ZepToolsService
 from ..utils.logger import get_logger
 
 logger = get_logger('mirofish.api.report')
+
+
+def _create_report_llm_and_tools():
+    """Create LLM client and Zep tools for report generation.
+    Uses REPORT_LLM_* env vars if set, otherwise falls back to main LLM config."""
+    llm_client = None
+    if Config.REPORT_LLM_API_KEY:
+        llm_client = LLMClient(
+            api_key=Config.REPORT_LLM_API_KEY,
+            base_url=Config.REPORT_LLM_BASE_URL or Config.LLM_BASE_URL,
+            model=Config.REPORT_LLM_MODEL_NAME or Config.LLM_MODEL_NAME,
+        )
+        logger.info(f"Report using dedicated LLM: {Config.REPORT_LLM_MODEL_NAME}")
+    zep_tools = ZepToolsService(llm_client=llm_client)
+    return llm_client, zep_tools
 
 
 # ============== Report Generation Endpoints ==============
@@ -130,11 +147,14 @@ def generate_report():
                     message="Initializing Report Agent..."
                 )
                 
-                # Create Report Agent
+                # Create Report Agent with dedicated LLM if configured
+                report_llm, report_zep = _create_report_llm_and_tools()
                 agent = ReportAgent(
                     graph_id=graph_id,
                     simulation_id=simulation_id,
-                    simulation_requirement=simulation_requirement
+                    simulation_requirement=simulation_requirement,
+                    llm_client=report_llm,
+                    zep_tools=report_zep
                 )
                 
                 # Progress callback
@@ -536,11 +556,14 @@ def chat_with_report_agent():
         
         simulation_requirement = project.simulation_requirement or ""
         
-        # Create Agent and conduct conversation
+        # Create Agent with dedicated LLM if configured
+        report_llm, report_zep = _create_report_llm_and_tools()
         agent = ReportAgent(
             graph_id=graph_id,
             simulation_id=simulation_id,
-            simulation_requirement=simulation_requirement
+            simulation_requirement=simulation_requirement,
+            llm_client=report_llm,
+            zep_tools=report_zep
         )
         
         result = agent.chat(message=message, chat_history=chat_history)
