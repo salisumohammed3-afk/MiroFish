@@ -39,19 +39,7 @@
         
         <div class="hero-right">
           <div class="logo-container">
-            <div class="logo-mark">
-              <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" class="hero-logo-svg">
-                <defs>
-                  <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#4F46E5"/>
-                    <stop offset="100%" stop-color="#7C3AED"/>
-                  </linearGradient>
-                </defs>
-                <rect x="8" y="12" width="44" height="32" rx="8" stroke="url(#logoGrad)" stroke-width="4" fill="none"/>
-                <rect x="20" y="24" width="44" height="32" rx="8" stroke="url(#logoGrad)" stroke-width="4" fill="none" opacity="0.7"/>
-                <rect x="32" y="36" width="44" height="32" rx="8" stroke="url(#logoGrad)" stroke-width="4" fill="none" opacity="0.4"/>
-              </svg>
-            </div>
+            <img src="../assets/logo/langsync-horizontal.png" alt="LangSync" class="hero-logo" />
           </div>
           
           <button class="scroll-down-btn" @click="scrollToBottom">
@@ -501,17 +489,10 @@ const startSimulation = () => {
   padding-right: 40px;
 }
 
-.logo-mark {
-  width: 260px;
-  height: 260px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hero-logo-svg {
+.hero-logo {
+  max-width: 420px;
   width: 100%;
-  height: 100%;
+  border-radius: 12px;
 }
 
 .scroll-down-btn {
@@ -873,9 +854,8 @@ const startSimulation = () => {
     margin-bottom: 40px;
   }
   
-  .logo-mark {
-    width: 160px;
-    height: 160px;
+  .hero-logo {
+    max-width: 200px;
   }
 }
 </style>
