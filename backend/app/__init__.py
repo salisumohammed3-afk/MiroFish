@@ -9,11 +9,14 @@ import warnings
 # 需要在所有其他导入之前设置
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 
 from .config import Config
 from .utils.logger import setup_logger, get_logger
+
+# Built frontend assets live here after `npm run build` (production only)
+_FRONTEND_DIST = os.path.join(os.path.dirname(__file__), '../../frontend/dist')
 
 
 def create_app(config_class=Config):
@@ -72,6 +75,19 @@ def create_app(config_class=Config):
     @app.route('/health')
     def health():
         return {'status': 'ok', 'service': 'MiroFish Backend'}
+    
+    # Serve built Vue SPA in production (when frontend/dist exists)
+    if os.path.isdir(_FRONTEND_DIST):
+        @app.route('/', defaults={'path': ''})
+        @app.route('/<path:path>')
+        def serve_frontend(path):
+            full = os.path.join(_FRONTEND_DIST, path)
+            if path and os.path.isfile(full):
+                return send_from_directory(_FRONTEND_DIST, path)
+            return send_from_directory(_FRONTEND_DIST, 'index.html')
+
+        if should_log_startup:
+            logger.info(f"Serving frontend from {_FRONTEND_DIST}")
     
     if should_log_startup:
         logger.info("MiroFish Backend 启动完成")
