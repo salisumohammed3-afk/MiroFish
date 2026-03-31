@@ -1708,7 +1708,7 @@ class ZepToolsService:
 - 使用纯文本段落，用空行分隔不同部分
 - 不要使用Markdown标题（如#、##、###）
 - 不要使用分割线（如---、***）
-- 引用受访者原话时使用中文引号「」
+- When quoting interviewees, use standard quotation marks ("")
 - 可以使用**加粗**标记关键词，但不要使用其他Markdown语法"""
 
         user_prompt = f"""采访主题：{interview_requirement}

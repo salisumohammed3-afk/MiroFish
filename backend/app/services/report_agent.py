@@ -651,12 +651,11 @@ SECTION_SYSTEM_PROMPT_TEMPLATE = """\
      > "某类人群会表示：原文内容..."
    - 这些引用是模拟预测的核心证据
 
-3. 【语言一致性 - 引用内容必须翻译为报告语言】
-   - 工具返回的内容可能包含英文或中英文混杂的表述
-   - 如果模拟需求和材料原文是中文的，报告必须全部使用中文撰写
-   - 当你引用工具返回的英文或中英混杂内容时，必须将其翻译为流畅的中文后再写入报告
-   - 翻译时保持原意不变，确保表述自然通顺
-   - 这一规则同时适用于正文和引用块（> 格式）中的内容
+3. 【Language consistency — all content must be in English】
+   - The report must be written entirely in English
+   - When quoting tool output that contains non-English text, translate it into fluent English
+   - Preserve the original meaning while ensuring natural, professional English
+   - This rule applies to both body text and quotation blocks (> format)
 
 4. 【忠实呈现预测结果】
    - 报告内容必须反映模拟世界中的代表未来的模拟结果
