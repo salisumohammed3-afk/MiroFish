@@ -84,11 +84,17 @@ class LLMClient:
         Returns:
             解析后的JSON对象
         """
+        json_messages = list(messages)
+        if json_messages and json_messages[-1]["role"] == "user":
+            json_messages[-1] = {
+                **json_messages[-1],
+                "content": json_messages[-1]["content"] + "\n\nRespond with valid JSON only. No markdown, no extra text."
+            }
+
         response = self.chat(
-            messages=messages,
+            messages=json_messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_format={"type": "json_object"}
         )
         # 清理markdown代码块标记
         cleaned_response = response.strip()
