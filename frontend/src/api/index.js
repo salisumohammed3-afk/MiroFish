@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { supabase } from '../lib/supabase'
 
 // Create axios instance
 const service = axios.create({
@@ -9,9 +10,15 @@ const service = axios.create({
   }
 })
 
-// Request interceptor
+// Request interceptor — attach Supabase JWT to every request
 service.interceptors.request.use(
-  config => {
+  async config => {
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`
+      }
+    }
     return config
   },
   error => {

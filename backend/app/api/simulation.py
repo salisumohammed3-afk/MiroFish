@@ -5,14 +5,16 @@ Step2: Zep entity reading & filtering, OASIS simulation preparation & execution 
 
 import os
 import traceback
-from flask import request, jsonify, send_file
+from flask import request, jsonify, send_file, g
 
 from . import simulation_bp
 from ..config import Config
+from ..middleware.auth import require_auth, optional_auth
 from ..services.zep_entity_reader import ZepEntityReader
 from ..services.oasis_profile_generator import OasisProfileGenerator
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
+from ..services.ownership import OwnershipService
 from ..utils.logger import get_logger
 from ..models.project import ProjectManager
 
@@ -162,6 +164,7 @@ def get_entities_by_type(graph_id: str, entity_type: str):
 # ============== Simulation Management Endpoints ==============
 
 @simulation_bp.route('/create', methods=['POST'])
+@optional_auth
 def create_simulation():
     """
     Create a new simulation
@@ -221,6 +224,11 @@ def create_simulation():
             enable_twitter=data.get('enable_twitter', True),
             enable_reddit=data.get('enable_reddit', True),
         )
+
+        if g.user and g.user.company_id:
+            OwnershipService.register_simulation(
+                state.simulation_id, g.user.company_id, project_id, g.user.id
+            )
         
         return jsonify({
             "success": True,
@@ -869,6 +877,7 @@ def _get_report_id_for_simulation(simulation_id: str) -> str:
 
 
 @simulation_bp.route('/history', methods=['GET'])
+@optional_auth
 def get_simulation_history():
     """
     Get historical simulation list (with project details)
@@ -909,6 +918,10 @@ def get_simulation_history():
         
         manager = SimulationManager()
         simulations = manager.list_simulations()[:limit]
+
+        if g.user and g.user.role != "super_admin" and g.user.company_id:
+            allowed_ids = set(OwnershipService.get_company_simulation_ids(g.user.company_id))
+            simulations = [s for s in simulations if s.simulation_id in allowed_ids]
         
         # Enrich simulation data, read only from Simulation files
         enriched_simulations = []

@@ -6,13 +6,15 @@ Uses project context mechanism with server-side persistent state
 import os
 import traceback
 import threading
-from flask import request, jsonify
+from flask import request, jsonify, g
 
 from . import graph_bp
 from ..config import Config
+from ..middleware.auth import require_auth, optional_auth
 from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import GraphBuilderService
 from ..services.text_processor import TextProcessor
+from ..services.ownership import OwnershipService
 from ..utils.file_parser import FileParser
 from ..utils.logger import get_logger
 from ..models.task import TaskManager, TaskStatus
@@ -33,10 +35,16 @@ def allowed_file(filename: str) -> bool:
 # ============== Project Management Endpoints ==============
 
 @graph_bp.route('/project/<project_id>', methods=['GET'])
+@optional_auth
 def get_project(project_id: str):
     """
     Get project details
     """
+    if g.user and not OwnershipService.check_project_access(
+        project_id, g.user.company_id, g.user.role == "super_admin"
+    ):
+        return jsonify({"success": False, "error": "Access denied"}), 403
+
     project = ProjectManager.get_project(project_id)
     
     if not project:
@@ -52,13 +60,18 @@ def get_project(project_id: str):
 
 
 @graph_bp.route('/project/list', methods=['GET'])
+@optional_auth
 def list_projects():
     """
-    List all projects
+    List all projects (scoped by company when authenticated)
     """
     limit = request.args.get('limit', 50, type=int)
     projects = ProjectManager.list_projects(limit=limit)
-    
+
+    if g.user and g.user.role != "super_admin" and g.user.company_id:
+        allowed_ids = set(OwnershipService.get_company_project_ids(g.user.company_id))
+        projects = [p for p in projects if p.project_id in allowed_ids]
+
     return jsonify({
         "success": True,
         "data": [p.to_dict() for p in projects],
@@ -119,6 +132,7 @@ def reset_project(project_id: str):
 # ============== Endpoint 1: Upload Files and Generate Ontology ==============
 
 @graph_bp.route('/ontology/generate', methods=['POST'])
+@optional_auth
 def generate_ontology():
     """
     Endpoint 1: Upload files, analyze and generate ontology definition
@@ -175,6 +189,9 @@ def generate_ontology():
         project = ProjectManager.create_project(name=project_name)
         project.simulation_requirement = simulation_requirement
         logger.info(f"Created project: {project.project_id}")
+
+        if g.user and g.user.company_id:
+            OwnershipService.register_project(project.project_id, g.user.company_id, g.user.id)
         
         # Save files and extract text
         document_texts = []

@@ -27,6 +27,9 @@ PyMuPDF>=1.24.0
 charset-normalizer>=3.0.0
 chardet>=5.0.0
 
+# ============= Authentication & Database =============
+supabase>=2.0.0
+
 # ============= Utility Libraries =============
 # Environment variable loading
 python-dotenv>=1.0.0

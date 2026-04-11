@@ -6,6 +6,11 @@
         <span class="brand-forecast">Forecast</span>
       </div>
       <div class="nav-links">
+        <template v-if="profile">
+          <span class="user-info">{{ profile.company?.name || profile.display_name }}</span>
+          <router-link v-if="profile.role === 'super_admin'" to="/admin" class="nav-link">Admin</router-link>
+          <button @click="handleSignOut" class="nav-link sign-out-btn">Sign out</button>
+        </template>
         <a href="https://langsync.ai" target="_blank" class="nav-link">
           langsync.ai <span class="arrow">↗</span>
         </a>
@@ -202,8 +207,15 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
+import { currentUser, signOut } from '../store/auth'
 
 const router = useRouter()
+const profile = currentUser
+
+const handleSignOut = async () => {
+  await signOut()
+  router.push('/login')
+}
 
 const formData = ref({
   simulationRequirement: ''
@@ -350,6 +362,21 @@ const startSimulation = () => {
 
 .nav-link:hover {
   opacity: 1;
+}
+
+.user-info {
+  color: #A78BFA;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.sign-out-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
 }
 
 .arrow {

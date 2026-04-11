@@ -38,6 +38,11 @@ class Config:
     REPORT_LLM_BASE_URL = os.environ.get('REPORT_LLM_BASE_URL')
     REPORT_LLM_MODEL_NAME = os.environ.get('REPORT_LLM_MODEL_NAME')
     
+    # Supabase configuration
+    SUPABASE_URL = os.environ.get('SUPABASE_URL')
+    SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
+    SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+    
     # Zep configuration
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
     

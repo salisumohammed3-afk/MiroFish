@@ -27,11 +27,10 @@ def main():
     # Validate configuration
     errors = Config.validate()
     if errors:
-        print("Configuration errors:")
+        print("Configuration warnings:")
         for err in errors:
-            print(f"  - {err}")
-        print("\nPlease check the configuration in the .env file")
-        sys.exit(1)
+            print(f"  ⚠ {err}")
+        print("\nLLM/Zep features will be unavailable until configured. Auth & admin will still work.")
     
     # Create application
     app = create_app()
