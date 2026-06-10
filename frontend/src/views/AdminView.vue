@@ -80,7 +80,7 @@
 
           <div v-if="showCreateUser" class="create-user-form">
             <h3>Create New User</h3>
-            <p class="form-hint">The user will be asked to change their password on first login.</p>
+            <p class="form-hint">No password needed. The user signs in with a one-time code sent to their email.</p>
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Name</label>
@@ -89,14 +89,6 @@
               <div class="form-group">
                 <label class="form-label">Email</label>
                 <input v-model="newUser.email" type="email" placeholder="user@company.com" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Temporary Password</label>
-                <div class="password-row">
-                  <input v-model="newUser.password" :type="showPassword ? 'text' : 'password'" placeholder="Min 8 characters" class="form-input" />
-                  <button @click="showPassword = !showPassword" class="toggle-pw" type="button">{{ showPassword ? 'Hide' : 'Show' }}</button>
-                  <button @click="generatePassword" class="toggle-pw" type="button">Generate</button>
-                </div>
               </div>
               <div class="form-group">
                 <label class="form-label">Company</label>
@@ -116,9 +108,7 @@
             </div>
             <div v-if="createError" class="error-msg">{{ createError }}</div>
             <div v-if="createSuccess" class="success-msg">
-              User created! Share these credentials:<br>
-              <strong>Email:</strong> {{ createSuccess.email }}<br>
-              <strong>Password:</strong> {{ createSuccess.password }}
+              User created. <strong>{{ createSuccess.email }}</strong> can now sign in at the login page with a one-time code sent to their email.
             </div>
             <div class="form-actions">
               <button @click="handleCreateUser" class="action-btn primary" :disabled="saving">
@@ -154,7 +144,6 @@
                     <span class="status-pill" :class="u.is_active ? 'active' : 'inactive'">
                       {{ u.is_active ? 'Active' : 'Disabled' }}
                     </span>
-                    <span v-if="u.must_change_password" class="status-pill pending">Temp password</span>
                   </td>
                   <td class="actions-cell">
                     <select
@@ -223,20 +212,11 @@ const showCreateCompany = ref(false)
 const newCompany = ref({ name: '', slug: '' })
 
 const showCreateUser = ref(false)
-const showPassword = ref(false)
 const createError = ref('')
 const createSuccess = ref(null)
-const newUser = ref({ display_name: '', email: '', password: '', company_id: '', role: 'member' })
+const newUser = ref({ display_name: '', email: '', company_id: '', role: 'member' })
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
-
-const generatePassword = () => {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  let pw = ''
-  for (let i = 0; i < 12; i++) pw += chars[Math.floor(Math.random() * chars.length)]
-  newUser.value.password = pw
-  showPassword.value = true
-}
 
 const loadCompanies = async () => {
   try { companies.value = (await listCompanies()).data } catch (e) { console.error(e) }
@@ -268,19 +248,15 @@ const handleCreateUser = async () => {
   createError.value = ''
   createSuccess.value = null
   const u = newUser.value
-  if (!u.display_name || !u.email || !u.password || !u.company_id) {
-    createError.value = 'All fields are required.'
-    return
-  }
-  if (u.password.length < 8) {
-    createError.value = 'Password must be at least 8 characters.'
+  if (!u.display_name || !u.email || !u.company_id) {
+    createError.value = 'Name, email and company are required.'
     return
   }
   saving.value = true
   try {
     await createUser(u)
-    createSuccess.value = { email: u.email, password: u.password }
-    newUser.value = { display_name: '', email: '', password: '', company_id: u.company_id, role: 'member' }
+    createSuccess.value = { email: u.email }
+    newUser.value = { display_name: '', email: '', company_id: u.company_id, role: 'member' }
     await loadUsers()
   } catch (e) {
     createError.value = e.response?.data?.error || e.message
@@ -291,7 +267,7 @@ const closeCreateUser = () => {
   showCreateUser.value = false
   createError.value = ''
   createSuccess.value = null
-  newUser.value = { display_name: '', email: '', password: '', company_id: '', role: 'member' }
+  newUser.value = { display_name: '', email: '', company_id: '', role: 'member' }
 }
 
 const handleUpdateUser = async (userId, updates) => {

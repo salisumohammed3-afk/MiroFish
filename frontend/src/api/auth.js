@@ -2,7 +2,6 @@ import service from './index'
 
 export const getMe = () => service.get('/api/auth/me')
 export const updateMe = (data) => service.patch('/api/auth/me', data)
-export const changePassword = (data) => service.post('/api/auth/me/change-password', data)
 
 export const listCompanies = () => service.get('/api/auth/admin/companies')
 export const createCompany = (data) => service.post('/api/auth/admin/companies', data)

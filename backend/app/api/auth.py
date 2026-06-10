@@ -1,8 +1,10 @@
 """
 Authentication & Admin API routes.
-Supabase handles login from the frontend SDK.
-Admin creates users directly with temporary passwords.
+Login is email one-time-code (OTP), handled by the Supabase SDK on the frontend.
+Admin creates users by email + company + role; no password is involved.
 """
+
+import secrets
 
 from flask import request, jsonify, g
 
@@ -179,13 +181,13 @@ def list_users():
 def create_user():
     """
     Create a new user directly.
-    Admin provides: name, email, temporary password, company, role.
-    User must change password on first login.
+    Admin provides: name, email, company, role. No password: the user signs in
+    with an email one-time-code. We still create a Supabase auth user (with a
+    random unused password) so the account exists to receive codes.
     """
     data = request.get_json()
     email = data.get("email", "").strip().lower()
     display_name = data.get("display_name", "").strip()
-    password = data.get("password", "").strip()
     company_id = data.get("company_id")
     role = data.get("role", "member")
 
@@ -193,8 +195,6 @@ def create_user():
         return jsonify({"success": False, "error": "Email is required"}), 400
     if not display_name:
         return jsonify({"success": False, "error": "Name is required"}), 400
-    if len(password) < 8:
-        return jsonify({"success": False, "error": "Password must be at least 8 characters"}), 400
     if role not in ("admin", "member", "viewer"):
         return jsonify({"success": False, "error": "Invalid role"}), 400
     if not company_id:
@@ -205,7 +205,8 @@ def create_user():
     try:
         auth_result = sb.auth.admin.create_user({
             "email": email,
-            "password": password,
+            # Random password the user never sees or uses; login is via OTP.
+            "password": secrets.token_urlsafe(24),
             "email_confirm": True,
             "user_metadata": {"display_name": display_name},
         })
@@ -217,13 +218,12 @@ def create_user():
         logger.error(f"Failed to create auth user: {e}")
         return jsonify({"success": False, "error": f"Failed to create user: {error_msg}"}), 500
 
-    # The handle_new_user trigger creates a profile, but we need to update it
-    # with the correct company, role, and must_change_password flag
+    # The handle_new_user trigger creates a profile; set the company and role.
     sb.table("user_profiles").update({
         "company_id": company_id,
         "role": role,
         "display_name": display_name,
-        "must_change_password": True,
+        "must_change_password": False,
     }).eq("id", str(user_id)).execute()
 
     logger.info(f"User created: {email} → company {company_id}, role {role}")

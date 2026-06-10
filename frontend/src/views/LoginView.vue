@@ -9,14 +9,14 @@
 
     <div class="auth-content">
       <div class="auth-card">
-        <!-- Normal login -->
-        <template v-if="!mustChangePassword">
+        <!-- Step 1: enter email -->
+        <template v-if="step === 'email'">
           <div class="auth-header">
             <h1 class="auth-title">Sign in</h1>
-            <p class="auth-subtitle">Access your predictive intelligence workspace</p>
+            <p class="auth-subtitle">Enter your email and we'll send you a sign-in code.</p>
           </div>
 
-          <form @submit.prevent="handleLogin" class="auth-form">
+          <form @submit.prevent="handleRequestCode" class="auth-form">
             <div class="form-group">
               <label class="form-label">Email</label>
               <input
@@ -24,18 +24,7 @@
                 type="email"
                 class="form-input"
                 placeholder="you@company.com"
-                required
-                :disabled="loading"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Password</label>
-              <input
-                v-model="password"
-                type="password"
-                class="form-input"
-                placeholder="Enter your password"
+                autocomplete="email"
                 required
                 :disabled="loading"
               />
@@ -45,51 +34,52 @@
 
             <button type="submit" class="submit-btn" :disabled="loading">
               <span v-if="loading" class="spinner"></span>
-              {{ loading ? 'Signing in...' : 'Sign in' }}
+              {{ loading ? 'Sending code...' : 'Send me a code' }}
             </button>
           </form>
         </template>
 
-        <!-- Forced password change -->
+        <!-- Step 2: enter the emailed code -->
         <template v-else>
           <div class="auth-header">
-            <div class="change-badge">First Login</div>
-            <h1 class="auth-title">Set your password</h1>
-            <p class="auth-subtitle">Your admin created a temporary password. Please choose your own password to continue.</p>
+            <h1 class="auth-title">Enter your code</h1>
+            <p class="auth-subtitle">
+              If <strong>{{ email }}</strong> has an account, a 6-digit code is on its way. It expires in 10 minutes.
+            </p>
           </div>
 
-          <form @submit.prevent="handleChangePassword" class="auth-form">
+          <form @submit.prevent="handleVerifyCode" class="auth-form">
             <div class="form-group">
-              <label class="form-label">New Password</label>
+              <label class="form-label">Sign-in code</label>
               <input
-                v-model="newPassword"
-                type="password"
-                class="form-input"
-                placeholder="Choose a strong password (min 8 characters)"
-                required
-                minlength="8"
-                :disabled="loading"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Confirm Password</label>
-              <input
-                v-model="confirmNewPassword"
-                type="password"
-                class="form-input"
-                placeholder="Repeat your new password"
+                v-model="code"
+                type="text"
+                class="form-input code-input"
+                placeholder="000000"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
                 required
                 :disabled="loading"
+                @input="code = code.replace(/[^0-9]/g, '')"
               />
             </div>
 
             <div v-if="error" class="error-msg">{{ error }}</div>
 
-            <button type="submit" class="submit-btn" :disabled="loading">
+            <button type="submit" class="submit-btn" :disabled="loading || code.length < 6">
               <span v-if="loading" class="spinner"></span>
-              {{ loading ? 'Updating...' : 'Set password & continue' }}
+              {{ loading ? 'Signing in...' : 'Sign in' }}
             </button>
+
+            <div class="auth-links">
+              <button type="button" class="link-btn" @click="resendCode" :disabled="loading || resendIn > 0">
+                {{ resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code' }}
+              </button>
+              <button type="button" class="link-btn" @click="backToEmail" :disabled="loading">
+                Use a different email
+              </button>
+            </div>
           </form>
         </template>
       </div>
@@ -104,60 +94,70 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { signInWithEmail, refreshProfile, currentUser } from '../store/auth'
-import { changePassword } from '../api/auth'
+import { requestOtp, verifyOtp, refreshProfile } from '../store/auth'
 
 const router = useRouter()
 const route = useRoute()
+const step = ref('email')
 const email = ref('')
-const password = ref('')
-const newPassword = ref('')
-const confirmNewPassword = ref('')
+const code = ref('')
 const error = ref('')
 const loading = ref(false)
-const mustChangePassword = ref(false)
+const resendIn = ref(0)
 
-const handleLogin = async () => {
+let resendTimer = null
+const startResendCooldown = () => {
+  resendIn.value = 30
+  clearInterval(resendTimer)
+  resendTimer = setInterval(() => {
+    resendIn.value -= 1
+    if (resendIn.value <= 0) clearInterval(resendTimer)
+  }, 1000)
+}
+
+const handleRequestCode = async () => {
   error.value = ''
   loading.value = true
   try {
-    await signInWithEmail(email.value, password.value)
-    await refreshProfile()
-
-    if (currentUser.value?.must_change_password) {
-      mustChangePassword.value = true
-    } else {
-      const redirect = route.query.redirect || '/'
-      router.push(redirect)
-    }
+    await requestOtp(email.value.trim())
+    step.value = 'code'
+    code.value = ''
+    startResendCooldown()
   } catch (err) {
-    error.value = err.message || 'Invalid email or password'
+    error.value = err.status === 429
+      ? 'Too many requests. Please wait a moment and try again.'
+      : (err.message || 'Could not send a code. Please try again.')
   } finally {
     loading.value = false
   }
 }
 
-const handleChangePassword = async () => {
+const resendCode = async () => {
+  if (resendIn.value > 0) return
+  await handleRequestCode()
+}
+
+const handleVerifyCode = async () => {
   error.value = ''
-  if (newPassword.value !== confirmNewPassword.value) {
-    error.value = 'Passwords do not match.'
-    return
-  }
-  if (newPassword.value.length < 8) {
-    error.value = 'Password must be at least 8 characters.'
-    return
-  }
   loading.value = true
   try {
-    await changePassword({ new_password: newPassword.value })
+    await verifyOtp(email.value.trim(), code.value)
     await refreshProfile()
     const redirect = route.query.redirect || '/'
     router.push(redirect)
   } catch (err) {
-    error.value = err.response?.data?.error || err.message || 'Failed to update password'
+    error.value = 'That code is invalid or expired. Check the code or request a new one.'
   } finally {
     loading.value = false
   }
+}
+
+const backToEmail = () => {
+  step.value = 'email'
+  code.value = ''
+  error.value = ''
+  clearInterval(resendTimer)
+  resendIn.value = 0
 }
 </script>
 
@@ -253,6 +253,36 @@ const handleChangePassword = async () => {
 
 .submit-btn:hover:not(:disabled) { opacity: 0.9; }
 .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.code-input {
+  font-size: 1.6rem;
+  letter-spacing: 12px;
+  text-align: center;
+  font-weight: 600;
+  padding-left: 12px;
+}
+
+.code-input::placeholder { letter-spacing: 12px; color: #D1D5DB; }
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #5B5FE5;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.link-btn:hover:not(:disabled) { text-decoration: underline; }
+.link-btn:disabled { color: #9CA3AF; cursor: not-allowed; }
 
 .spinner {
   width: 18px;

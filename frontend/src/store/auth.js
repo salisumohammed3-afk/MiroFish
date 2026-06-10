@@ -56,22 +56,25 @@ export async function initAuth() {
   })
 }
 
-export async function signInWithEmail(email, password) {
+// Email one-time-code sign-in. We never create a user from the login screen
+// (shouldCreateUser: false) — accounts are provisioned by an admin first.
+export async function requestOtp(email) {
   if (!supabase) throw new Error('Auth not configured')
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) throw error
-  return data
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false },
+  })
+  // Don't reveal whether an account exists: only surface genuine failures like
+  // rate limiting. "No such account" resolves quietly so the UI always advances
+  // to the code step with a neutral message.
+  if (error && (error.status === 429 || /rate/i.test(error.code || ''))) {
+    throw error
+  }
 }
 
-export async function signUpWithEmail(email, password, displayName) {
+export async function verifyOtp(email, token) {
   if (!supabase) throw new Error('Auth not configured')
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { display_name: displayName },
-    },
-  })
+  const { data, error } = await supabase.auth.verifyOtp({ email, token: token.trim(), type: 'email' })
   if (error) throw error
   return data
 }
