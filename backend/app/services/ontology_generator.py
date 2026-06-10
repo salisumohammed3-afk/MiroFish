@@ -6,6 +6,7 @@ Interface 1: Analyzes text content and generates entity and relationship type de
 import json
 from typing import Dict, Any, List, Optional
 from ..utils.llm_client import LLMClient
+from ..utils.naming import normalize_ontology_names
 
 
 # System prompt for ontology generation
@@ -234,7 +235,12 @@ Based on the above content, design entity types and relationship types suitable 
     
     def _validate_and_process(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and post-process results"""
-        
+
+        # Zep requires PascalCase alphanumeric type names; the LLM often
+        # produces snake_case. Normalize before any further processing so the
+        # saved ontology, Zep, and downstream entity queries all agree.
+        result = normalize_ontology_names(result)
+
         # Ensure required fields exist
         if "entity_types" not in result:
             result["entity_types"] = []

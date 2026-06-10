@@ -234,7 +234,14 @@ class ZepEntityReader:
             FilteredEntities: Filtered entity collection
         """
         logger.info(f"Starting entity filtering for graph {graph_id}...")
-        
+
+        # Zep stores labels using normalized PascalCase type names; normalize
+        # the requested filter the same way so older snake_case ontologies
+        # (saved before normalization existed) still match.
+        if defined_entity_types:
+            from ..utils.naming import to_pascal_case
+            defined_entity_types = [to_pascal_case(t) for t in defined_entity_types]
+
         # Get all nodes
         all_nodes = self.get_all_nodes(graph_id)
         total_count = len(all_nodes)

@@ -6,12 +6,13 @@ Provides simulation report generation, retrieval, conversation, and other endpoi
 import os
 import traceback
 import threading
-from flask import request, jsonify, send_file
+from flask import request, jsonify, send_file, g
 
 from . import report_bp
 from ..config import Config
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.simulation_manager import SimulationManager
+from ..services.ownership import OwnershipService
 from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
 from ..utils.llm_client import LLMClient
@@ -394,7 +395,12 @@ def list_reports():
             simulation_id=simulation_id,
             limit=limit
         )
-        
+
+        # Scope to the caller's company: a report inherits its simulation's owner.
+        if g.user and g.user.role != "super_admin" and g.user.company_id:
+            allowed_sim_ids = set(OwnershipService.get_company_simulation_ids(g.user.company_id))
+            reports = [r for r in reports if r.simulation_id in allowed_sim_ids]
+
         return jsonify({
             "success": True,
             "data": [r.to_dict() for r in reports],

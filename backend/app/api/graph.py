@@ -10,7 +10,6 @@ from flask import request, jsonify, g
 
 from . import graph_bp
 from ..config import Config
-from ..middleware.auth import require_auth, optional_auth
 from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import GraphBuilderService
 from ..services.text_processor import TextProcessor
@@ -35,7 +34,6 @@ def allowed_file(filename: str) -> bool:
 # ============== Project Management Endpoints ==============
 
 @graph_bp.route('/project/<project_id>', methods=['GET'])
-@optional_auth
 def get_project(project_id: str):
     """
     Get project details
@@ -60,7 +58,6 @@ def get_project(project_id: str):
 
 
 @graph_bp.route('/project/list', methods=['GET'])
-@optional_auth
 def list_projects():
     """
     List all projects (scoped by company when authenticated)
@@ -132,7 +129,6 @@ def reset_project(project_id: str):
 # ============== Endpoint 1: Upload Files and Generate Ontology ==============
 
 @graph_bp.route('/ontology/generate', methods=['POST'])
-@optional_auth
 def generate_ontology():
     """
     Endpoint 1: Upload files, analyze and generate ontology definition

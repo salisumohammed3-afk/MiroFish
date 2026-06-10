@@ -4,6 +4,14 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+# Vite inlines VITE_* values at build time. Railway exposes service variables
+# to Dockerfile builds as build args, so declare them here and promote to env
+# before building, otherwise the production bundle ships with no Supabase
+# config and login silently breaks.
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 RUN npm run build
 
 # Stage 2: Python runtime with built frontend

@@ -216,10 +216,14 @@ class GraphBuilderService:
                 return f"entity_{attr_name}"
             return attr_name
         
+        from ..utils.naming import to_pascal_case, to_screaming_snake
+
         # Dynamically create entity types
         entity_types = {}
         for entity_def in ontology.get("entity_types", []):
-            name = entity_def["name"]
+            # Zep rejects non-PascalCase type names; normalize defensively so
+            # ontologies saved before normalization existed still build.
+            name = to_pascal_case(entity_def["name"])
             description = entity_def.get("description", f"A {name} entity.")
             
             # Create attribute dict and type annotations (required by Pydantic v2)
@@ -243,7 +247,9 @@ class GraphBuilderService:
         # Dynamically create edge types
         edge_definitions = {}
         for edge_def in ontology.get("edge_types", []):
-            name = edge_def["name"]
+            # Zep requires SCREAMING_SNAKE_CASE for edge names (unlike the
+            # PascalCase rule for entities); normalize defensively.
+            name = to_screaming_snake(edge_def["name"])
             description = edge_def.get("description", f"A {name} relationship.")
             
             # Create attribute dict and type annotations
@@ -259,18 +265,20 @@ class GraphBuilderService:
             
             attrs["__annotations__"] = annotations
             
-            # Dynamically create class
+            # Dynamically create class (Python class name derived from the
+            # SCREAMING_SNAKE edge name)
             class_name = ''.join(word.capitalize() for word in name.split('_'))
             edge_class = type(class_name, (EdgeModel,), attrs)
             edge_class.__doc__ = description
             
-            # Build source_targets
+            # Build source_targets (entity references must match the
+            # normalized entity type names registered above)
             source_targets = []
             for st in edge_def.get("source_targets", []):
                 source_targets.append(
                     EntityEdgeSourceTarget(
-                        source=st.get("source", "Entity"),
-                        target=st.get("target", "Entity")
+                        source=to_pascal_case(st.get("source", "Entity")),
+                        target=to_pascal_case(st.get("target", "Entity"))
                     )
                 )
             

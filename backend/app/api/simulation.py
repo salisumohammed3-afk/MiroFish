@@ -9,7 +9,6 @@ from flask import request, jsonify, send_file, g
 
 from . import simulation_bp
 from ..config import Config
-from ..middleware.auth import require_auth, optional_auth
 from ..services.zep_entity_reader import ZepEntityReader
 from ..services.oasis_profile_generator import OasisProfileGenerator
 from ..services.simulation_manager import SimulationManager, SimulationStatus
@@ -164,7 +163,6 @@ def get_entities_by_type(graph_id: str, entity_type: str):
 # ============== Simulation Management Endpoints ==============
 
 @simulation_bp.route('/create', methods=['POST'])
-@optional_auth
 def create_simulation():
     """
     Create a new simulation
@@ -798,10 +796,15 @@ def list_simulations():
     """
     try:
         project_id = request.args.get('project_id')
-        
+
         manager = SimulationManager()
         simulations = manager.list_simulations(project_id=project_id)
-        
+
+        # Scope to the caller's company (super_admin sees everything).
+        if g.user and g.user.role != "super_admin" and g.user.company_id:
+            allowed_ids = set(OwnershipService.get_company_simulation_ids(g.user.company_id))
+            simulations = [s for s in simulations if s.simulation_id in allowed_ids]
+
         return jsonify({
             "success": True,
             "data": [s.to_dict() for s in simulations],
@@ -877,7 +880,6 @@ def _get_report_id_for_simulation(simulation_id: str) -> str:
 
 
 @simulation_bp.route('/history', methods=['GET'])
-@optional_auth
 def get_simulation_history():
     """
     Get historical simulation list (with project details)

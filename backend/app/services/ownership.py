@@ -69,3 +69,49 @@ class OwnershipService:
         sb = get_supabase_admin()
         result = sb.table("simulation_ownership").select("simulation_id").eq("simulation_id", simulation_id).eq("company_id", company_id).execute()
         return len(result.data) > 0
+
+    @staticmethod
+    def check_report_access(report_id: str, company_id: Optional[str], is_super_admin: bool) -> bool:
+        """Check report access by resolving the report to its simulation owner.
+
+        A report has no ownership row of its own; it inherits the ownership of the
+        simulation it was generated from. If the report does not exist, access is
+        allowed so the route can return its own 404 (rather than masking it as 403).
+        """
+        if is_super_admin:
+            return True
+        if not company_id:
+            return False
+        # Lazy import to avoid a circular import at module load.
+        from .report_agent import ReportManager
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return True  # let the handler 404
+        return OwnershipService.check_simulation_access(report.simulation_id, company_id, False)
+
+    @staticmethod
+    def check_graph_access(graph_id: str, company_id: Optional[str], is_super_admin: bool) -> bool:
+        """Check access to a Zep graph by resolving it to the owning project/simulation.
+
+        A graph belongs to the project that built it (and to the simulations created
+        from that project). Ownership is tracked at the project/simulation level, so we
+        resolve graph_id -> project_id / simulation_id and defer to those checks. An
+        unresolvable graph is denied for non-super-admins (it is not theirs).
+        """
+        if is_super_admin:
+            return True
+        if not company_id:
+            return False
+        # Lazy imports to avoid circular imports at module load.
+        from ..models.project import ProjectManager
+        from .simulation_manager import SimulationManager
+
+        for project in ProjectManager.list_projects(limit=1000):
+            if getattr(project, "graph_id", None) == graph_id:
+                return OwnershipService.check_project_access(project.project_id, company_id, False)
+
+        for state in SimulationManager().list_simulations():
+            if getattr(state, "graph_id", None) == graph_id:
+                return OwnershipService.check_simulation_access(state.simulation_id, company_id, False)
+
+        return False
