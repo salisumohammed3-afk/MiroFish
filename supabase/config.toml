@@ -1,0 +1,47 @@
+project_id = "mirofish"
+
+# Only auth is managed here. Email sign-in codes are delivered via Resend
+# (custom SMTP) so they arrive reliably; the magic-link template is overridden
+# to send the 6-digit code rather than a link.
+
+[auth]
+enabled = true
+site_url = "https://forecast.langsync.ai"
+additional_redirect_urls = ["https://forecast.langsync.ai"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# No public self-signup: company users are created by an admin, then sign in by code.
+enable_signup = false
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+minimum_password_length = 8
+
+[auth.rate_limit]
+# Raised above the built-in default of 2/hour now that custom SMTP is in place.
+email_sent = 50
+
+# NOTE: [auth.email] enable_signup is the email PROVIDER toggle in Supabase, not
+# just a signup flag. It must stay true or all email login breaks. Public signup
+# is blocked by [auth] enable_signup = false above (company users are admin-created).
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+secure_password_change = false
+max_frequency = "10s"
+otp_length = 6
+otp_expiry = 600
+
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_SMTP_PASSWORD)"
+admin_email = "login@onboarding.langsync.ai"
+sender_name = "LangSync Forecast"
+
+[auth.email.template.magic_link]
+subject = "Your LangSync Forecast sign-in code"
+content_path = "./supabase/templates/magic_link.html"
