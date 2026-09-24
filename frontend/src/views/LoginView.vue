@@ -178,7 +178,7 @@ const backToEmail = () => {
 }
 
 .nav-brand { font-weight: 700; letter-spacing: -0.5px; font-size: 1.25rem; }
-.brand-lang { color: #818CF8; }
+.brand-lang { color: #7cc4ff; }
 .brand-sync { color: #A78BFA; }
 .brand-forecast { color: #FFFFFF; margin-left: 6px; font-weight: 500; opacity: 0.7; }
 
@@ -223,7 +223,7 @@ const backToEmail = () => {
   background: #FAFAFA;
 }
 
-.form-input:focus { outline: none; border-color: #5B5FE5; background: #FFFFFF; }
+.form-input:focus { outline: none; border-color: #0099ff; background: #FFFFFF; }
 
 .error-msg {
   color: #DC2626;
@@ -235,7 +235,7 @@ const backToEmail = () => {
 }
 
 .submit-btn {
-  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  background: linear-gradient(135deg, #0099ff, #7C3AED);
   color: #FFFFFF;
   border: none;
   padding: 14px;
@@ -275,7 +275,7 @@ const backToEmail = () => {
   border: none;
   padding: 0;
   cursor: pointer;
-  color: #5B5FE5;
+  color: #0099ff;
   font-size: 0.85rem;
   font-family: inherit;
   font-weight: 500;

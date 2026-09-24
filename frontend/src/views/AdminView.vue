@@ -316,12 +316,12 @@ const handleSignOut = async () => {
 }
 
 .nav-brand { font-weight: 700; letter-spacing: -0.5px; font-size: 1.25rem; display: flex; align-items: center; gap: 8px; }
-.brand-lang { color: #818CF8; }
+.brand-lang { color: #7cc4ff; }
 .brand-sync { color: #A78BFA; }
 .brand-forecast { color: #FFFFFF; margin-left: 6px; font-weight: 500; opacity: 0.7; }
 
 .admin-badge {
-  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  background: linear-gradient(135deg, #0099ff, #7C3AED);
   color: #FFF;
   font-size: 0.65rem;
   font-weight: 700;
@@ -368,7 +368,7 @@ const handleSignOut = async () => {
 }
 
 .sidebar-item:hover { background: #F9FAFB; color: #111827; }
-.sidebar-item.active { color: #4F46E5; background: rgba(79, 70, 229, 0.06); border-right: 2px solid #4F46E5; font-weight: 600; }
+.sidebar-item.active { color: #0099ff; background: rgba(79, 70, 229, 0.06); border-right: 2px solid #0099ff; font-weight: 600; }
 .tab-icon { font-size: 0.8rem; }
 
 .admin-main {
@@ -400,7 +400,7 @@ const handleSignOut = async () => {
 }
 
 .action-btn:hover { border-color: #D1D5DB; background: #F9FAFB; }
-.action-btn.primary { background: linear-gradient(135deg, #4F46E5, #7C3AED); color: #FFF; border-color: transparent; }
+.action-btn.primary { background: linear-gradient(135deg, #0099ff, #7C3AED); color: #FFF; border-color: transparent; }
 .action-btn.primary:hover { opacity: 0.9; }
 .action-btn.danger { color: #DC2626; border-color: #FCA5A5; }
 .action-btn.danger:hover { background: #FEF2F2; }
@@ -429,7 +429,7 @@ const handleSignOut = async () => {
   background: #FAFAFA;
 }
 
-.inline-form .form-input:focus { outline: none; border-color: #5B5FE5; background: #FFF; }
+.inline-form .form-input:focus { outline: none; border-color: #0099ff; background: #FFF; }
 .inline-actions { display: flex; gap: 8px; }
 
 .create-user-form {
@@ -463,7 +463,7 @@ const handleSignOut = async () => {
   width: 100%;
 }
 
-.create-user-form .form-input:focus { outline: none; border-color: #5B5FE5; background: #FFF; }
+.create-user-form .form-input:focus { outline: none; border-color: #0099ff; background: #FFF; }
 
 .password-row { display: flex; gap: 8px; align-items: center; }
 .password-row .form-input { flex: 1; }
@@ -477,7 +477,7 @@ const handleSignOut = async () => {
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  color: #5B5FE5;
+  color: #0099ff;
   font-weight: 500;
 }
 
@@ -554,7 +554,7 @@ code {
   padding: 2px 6px;
   border-radius: 2px;
   font-size: 0.85em;
-  color: #4F46E5;
+  color: #0099ff;
 }
 
 .inline-select {
@@ -607,7 +607,7 @@ code {
   .admin-content { flex-direction: column; }
   .admin-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #E5E7EB; display: flex; overflow-x: auto; padding: 0; }
   .sidebar-item { padding: 12px 16px; white-space: nowrap; }
-  .sidebar-item.active { border-right: none; border-bottom: 2px solid #4F46E5; }
+  .sidebar-item.active { border-right: none; border-bottom: 2px solid #0099ff; }
   .admin-main { padding: 24px 16px; }
   .form-grid { grid-template-columns: 1fr; }
   .header-actions { flex-direction: column; gap: 8px; }

@@ -13,10 +13,10 @@
 }
 
 #app {
-  font-family: 'Avenir Next', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #000000;
+  color: #0b1220;
   background-color: #ffffff;
 }
 
@@ -30,15 +30,20 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #5B5FE5;
+  background: #0099ff;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4F46E5;
+  background: #0099ff;
 }
 
 button {
   font-family: inherit;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Outfit', system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }
 </style>

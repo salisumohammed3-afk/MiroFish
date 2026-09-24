@@ -294,8 +294,8 @@ const startSimulation = () => {
 :root {
   --black: #0F0F0F;
   --white: #FFFFFF;
-  --accent: #5B5FE5;
-  --accent-dark: #4F46E5;
+  --accent: #0099ff;
+  --accent-dark: #0099ff;
   --accent-light: #7C3AED;
   --gray-light: #F5F5F7;
   --gray-text: #6B7280;
@@ -329,7 +329,7 @@ const startSimulation = () => {
 }
 
 .brand-lang {
-  color: #818CF8;
+  color: #7cc4ff;
 }
 
 .brand-sync {

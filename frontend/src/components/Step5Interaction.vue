@@ -1033,7 +1033,7 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .report-tag {
-  background: #000000;
+  background: #0b1220;
   color: #FFFFFF;
   font-size: 11px;
   font-weight: 700;

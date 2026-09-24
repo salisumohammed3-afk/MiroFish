@@ -1520,7 +1520,7 @@ onUnmounted(() => {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   font-weight: 600;
-  color: #6366F1;
+  color: #33abff;
   background: #EEF2FF;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1662,7 +1662,7 @@ onUnmounted(() => {
 }
 
 .timeline-hour.active {
-  background: linear-gradient(180deg, #6366F1, #818CF8);
+  background: linear-gradient(180deg, #33abff, #7cc4ff);
 }
 
 .timeline-marks {
@@ -1713,7 +1713,7 @@ onUnmounted(() => {
 
 .mini-bar {
   height: 4px;
-  background: linear-gradient(90deg, #6366F1, #A855F7);
+  background: linear-gradient(90deg, #33abff, #A855F7);
   border-radius: 2px;
   min-width: 4px;
   max-width: 40px;
@@ -1732,7 +1732,7 @@ onUnmounted(() => {
 }
 
 .param-value.highlight {
-  color: #6366F1;
+  color: #33abff;
 }
 
 /* Platforms Grid */

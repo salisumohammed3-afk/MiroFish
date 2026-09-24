@@ -2365,7 +2365,7 @@ watch(() => props.reportId, (newId) => {
 }
 
 .report-tag {
-  background: #000000;
+  background: #0b1220;
   color: #FFFFFF;
   font-size: 11px;
   font-weight: 700;
@@ -3674,7 +3674,7 @@ watch(() => props.reportId, (newId) => {
   font-size: 10px;
   font-weight: 600;
   color: #FFFFFF;
-  background: #4F46E5;
+  background: #0099ff;
   padding: 3px 10px;
   border-radius: 10px;
 }
@@ -3721,7 +3721,7 @@ watch(() => props.reportId, (newId) => {
 :deep(.interview-display .stat-value) {
   font-size: 14px;
   font-weight: 600;
-  color: #4F46E5;
+  color: #0099ff;
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -3804,7 +3804,7 @@ watch(() => props.reportId, (newId) => {
 :deep(.interview-display .agent-tab.active) {
   background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
   border-color: #A5B4FC;
-  color: #4338CA;
+  color: #0b64a8;
   box-shadow: 0 1px 2px rgba(99, 102, 241, 0.1);
 }
 
@@ -3827,7 +3827,7 @@ watch(() => props.reportId, (newId) => {
 }
 
 :deep(.interview-display .agent-tab.active .tab-avatar) {
-  background: #6366F1;
+  background: #33abff;
   color: #FFFFFF;
 }
 
@@ -3962,9 +3962,9 @@ watch(() => props.reportId, (newId) => {
 }
 
 :deep(.interview-display .a-badge) {
-  background: #4F46E5;
+  background: #0099ff;
   color: #FFFFFF;
-  border: 1px solid #4F46E5;
+  border: 1px solid #0099ff;
 }
 
 :deep(.interview-display .qa-content) {
@@ -4040,7 +4040,7 @@ watch(() => props.reportId, (newId) => {
 
 :deep(.interview-display .platform-btn.active) {
   background: transparent;
-  color: #4F46E5;
+  color: #0099ff;
   border-color: #E5E7EB;
   box-shadow: none;
 }

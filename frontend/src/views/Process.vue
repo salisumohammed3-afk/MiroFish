@@ -1093,7 +1093,7 @@ onUnmounted(() => {
 <style scoped>
 /* Variables */
 :root {
-  --black: #000000;
+  --black: #0b1220;
   --white: #FFFFFF;
   --orange: #FF6B35;
   --gray-light: #F5F5F5;
