@@ -62,7 +62,7 @@ export async function requestOtp(email) {
   if (!supabase) throw new Error('Auth not configured')
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: false },
+    options: { shouldCreateUser: false, emailRedirectTo: window.location.origin },
   })
   // Don't reveal whether an account exists: only surface genuine failures like
   // rate limiting. "No such account" resolves quietly so the UI always advances

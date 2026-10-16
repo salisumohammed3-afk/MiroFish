@@ -3,7 +3,7 @@ Supabase client singleton for MiroFish backend.
 Uses the service_role key for admin operations (bypasses RLS).
 """
 
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 from ..config import Config
 from ..utils.logger import get_logger
 
@@ -21,7 +21,7 @@ def get_supabase_client() -> Client:
         key = Config.SUPABASE_ANON_KEY
         if not url or not key:
             raise RuntimeError("SUPABASE_URL and SUPABASE_ANON_KEY must be configured")
-        _client = create_client(url, key)
+        _client = create_client(url, key, options=ClientOptions(schema=Config.SUPABASE_SCHEMA))
         logger.info("Supabase public client initialized")
     return _client
 
@@ -34,6 +34,6 @@ def get_supabase_admin() -> Client:
         key = Config.SUPABASE_SERVICE_ROLE_KEY
         if not url or not key:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured")
-        _admin_client = create_client(url, key)
+        _admin_client = create_client(url, key, options=ClientOptions(schema=Config.SUPABASE_SCHEMA))
         logger.info("Supabase admin client initialized")
     return _admin_client

@@ -176,6 +176,19 @@ def list_users():
     return jsonify({"success": True, "data": result.data})
 
 
+def _existing_user_id(sb, email):
+    """The id of an existing sign-in account with this email, or None."""
+    page = 1
+    while True:
+        users = sb.auth.admin.list_users(page=page, per_page=1000)
+        for u in users:
+            if (u.email or "").lower() == email:
+                return u.id
+        if len(users) < 1000:
+            return None
+        page += 1
+
+
 @auth_bp.route('/admin/users', methods=['POST'])
 @require_admin
 def create_user():
@@ -214,17 +227,26 @@ def create_user():
     except Exception as e:
         error_msg = str(e)
         if "already been registered" in error_msg or "already exists" in error_msg:
-            return jsonify({"success": False, "error": "A user with this email already exists"}), 409
-        logger.error(f"Failed to create auth user: {e}")
-        return jsonify({"success": False, "error": f"Failed to create user: {error_msg}"}), 500
+            # Sign-in is shared across LangSync products, so this person may
+            # already have an account from another product. Reuse it.
+            user_id = _existing_user_id(sb, email)
+            if not user_id:
+                return jsonify({"success": False, "error": "A user with this email already exists"}), 409
+            if sb.table("user_profiles").select("id").eq("id", str(user_id)).execute().data:
+                return jsonify({"success": False, "error": "This person already has Forecast access"}), 409
+        else:
+            logger.error(f"Failed to create auth user: {e}")
+            return jsonify({"success": False, "error": f"Failed to create user: {error_msg}"}), 500
 
-    # The handle_new_user trigger creates a profile; set the company and role.
-    sb.table("user_profiles").update({
+    # Create or complete the Forecast profile for this account.
+    sb.table("user_profiles").upsert({
+        "id": str(user_id),
+        "email": email,
         "company_id": company_id,
         "role": role,
         "display_name": display_name,
         "must_change_password": False,
-    }).eq("id", str(user_id)).execute()
+    }).execute()
 
     logger.info(f"User created: {email} → company {company_id}, role {role}")
 

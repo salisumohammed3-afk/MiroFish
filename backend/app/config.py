@@ -42,6 +42,8 @@ class Config:
     SUPABASE_URL = os.environ.get('SUPABASE_URL')
     SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
     SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+    # Forecast's tables live in their own section of the shared LangSync Platform database.
+    SUPABASE_SCHEMA = os.environ.get('SUPABASE_SCHEMA', 'public')
     
     # Zep configuration
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
