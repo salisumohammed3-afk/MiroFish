@@ -40,7 +40,6 @@
                 inputmode="numeric"
                 autocomplete="one-time-code"
                 pattern="[0-9]*"
-                maxlength="6"
                 placeholder="000000"
                 @input="onCodeInput"
               />
@@ -180,7 +179,9 @@ const resendCode = async () => {
   await handleRequestCode()
 }
 
-// Digits only, six at most; the sixth digit signs in straight away.
+// Digits only, six at most; the sixth digit signs in straight away. No
+// maxlength on the box: a pasted "1 2 3 4 5 6" or "123-456" must reach
+// this handler whole.
 const onCodeInput = (e) => {
   const v = e.target.value.replace(/\D/g, '').slice(0, 6)
   code.value = v
