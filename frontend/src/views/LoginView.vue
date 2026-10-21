@@ -1,100 +1,140 @@
 <template>
-  <div class="auth-container">
-    <nav class="navbar">
-      <div class="nav-brand">
-        <span class="brand-lang">Lang</span><span class="brand-sync">Sync</span>
-        <span class="brand-forecast">Forecast</span>
+  <!--
+    The sign-in page in the shared LangSync product kit's look (the same door as
+    Answer Map, Prompt Review, Pods, Cut Room and the hub). The kit is React, so
+    this is the same layout and values rebuilt in Vue with plain CSS. Only the
+    look is the kit's: signing in is still Forecast's own Supabase email code on
+    the shared LangSync Platform database (store/auth.js), unchanged.
+  -->
+  <main class="kit-login">
+    <!-- Left: the door. -->
+    <section class="door">
+      <div class="kit-rise" style="animation-delay: 40ms">
+        <img src="/langsync-lockup.png" alt="LangSync" height="32" class="lockup" />
       </div>
-    </nav>
 
-    <div class="auth-content">
-      <div class="auth-card">
-        <!-- Step 1: enter email -->
-        <template v-if="step === 'email'">
-          <div class="auth-header">
-            <h1 class="auth-title">Sign in</h1>
-            <p class="auth-subtitle">Enter your email and we'll send you a sign-in code.</p>
-          </div>
+      <div class="door-middle">
+        <div class="door-inner">
+          <p class="kit-rise eyebrow" style="animation-delay: 120ms">Welcome back</p>
+          <h1 class="kit-rise kit-display title" style="animation-delay: 180ms">
+            Sign in to<br />{{ PRODUCT.name }}
+          </h1>
+          <p class="kit-rise lead" style="animation-delay: 240ms">
+            Enter your email and we will send you a code that signs you in. No password to remember.
+          </p>
 
-          <form @submit.prevent="handleRequestCode" class="auth-form">
-            <div class="form-group">
-              <label class="form-label">Email</label>
+          <div class="kit-rise form-wrap" style="animation-delay: 300ms">
+            <!-- Step 2: the emailed code -->
+            <form v-if="step === 'code'" class="stack" @submit.prevent="handleVerifyCode()">
+              <div class="sent-box">
+                <p>
+                  We sent a six-digit code to <span class="strong">{{ email.trim() }}</span> if it has a
+                  Forecast account. Enter it below.
+                </p>
+              </div>
+
               <input
-                v-model="email"
-                type="email"
-                class="form-input"
-                placeholder="you@company.com"
-                autocomplete="email"
-                required
-                :disabled="loading"
-              />
-            </div>
-
-            <div v-if="error" class="error-msg">{{ error }}</div>
-
-            <button type="submit" class="submit-btn" :disabled="loading">
-              <span v-if="loading" class="spinner"></span>
-              {{ loading ? 'Sending code...' : 'Send me a code' }}
-            </button>
-          </form>
-        </template>
-
-        <!-- Step 2: enter the emailed code -->
-        <template v-else>
-          <div class="auth-header">
-            <h1 class="auth-title">Enter your code</h1>
-            <p class="auth-subtitle">
-              If <strong>{{ email }}</strong> has an account, a 6-digit code is on its way. It expires in 10 minutes.
-            </p>
-          </div>
-
-          <form @submit.prevent="handleVerifyCode" class="auth-form">
-            <div class="form-group">
-              <label class="form-label">Sign-in code</label>
-              <input
-                v-model="code"
-                type="text"
-                class="form-input code-input"
-                placeholder="000000"
+                ref="codeRef"
+                :value="code"
+                class="field code-field"
                 inputmode="numeric"
                 autocomplete="one-time-code"
+                pattern="[0-9]*"
                 maxlength="6"
-                required
-                :disabled="loading"
-                @input="code = code.replace(/[^0-9]/g, '')"
+                placeholder="000000"
+                @input="onCodeInput"
               />
-            </div>
 
-            <div v-if="error" class="error-msg">{{ error }}</div>
+              <p v-if="error" class="error">{{ error }}</p>
 
-            <button type="submit" class="submit-btn" :disabled="loading || code.length < 6">
-              <span v-if="loading" class="spinner"></span>
-              {{ loading ? 'Signing in...' : 'Sign in' }}
-            </button>
-
-            <div class="auth-links">
-              <button type="button" class="link-btn" @click="resendCode" :disabled="loading || resendIn > 0">
-                {{ resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code' }}
+              <button type="submit" class="primary" :disabled="loading || code.length !== 6">
+                {{ loading ? 'Checking…' : 'Sign in' }}
               </button>
-              <button type="button" class="link-btn" @click="backToEmail" :disabled="loading">
-                Use a different email
+
+              <div class="links">
+                <button type="button" class="link muted" :disabled="loading" @click="backToEmail">
+                  Use a different email
+                </button>
+                <button type="button" class="link brand" :disabled="loading || resendIn > 0" @click="resendCode">
+                  {{ resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code' }}
+                </button>
+              </div>
+            </form>
+
+            <!-- Step 1: the email -->
+            <form v-else class="stack" @submit.prevent="handleRequestCode">
+              <label class="label">
+                <span>Email</span>
+                <input
+                  v-model="email"
+                  type="email"
+                  class="field email-field"
+                  placeholder="you@company.com"
+                  autocomplete="email"
+                  autofocus
+                  required
+                />
+              </label>
+
+              <p v-if="error" class="error">{{ error }}</p>
+
+              <button type="submit" class="primary" :disabled="loading">
+                {{ loading ? 'Sending code…' : 'Email me a sign-in code' }}
               </button>
-            </div>
-          </form>
-        </template>
+            </form>
+          </div>
+        </div>
       </div>
 
-      <div class="auth-decoration">
-        <img src="../assets/logo/langsync-logo.png" alt="LangSync" class="auth-logo" />
+      <p class="kit-rise foot" style="animation-delay: 420ms">
+        Access is by invitation. Ask your LangSync contact to be added.
+      </p>
+    </section>
+
+    <!-- Right: a calm branded panel (wide screens only). -->
+    <aside class="panel field-texture">
+      <div class="glow glow-blue"></div>
+      <div class="glow glow-violet"></div>
+      <div class="panel-inner">
+        <div class="panel-copy">
+          <div class="kit-rise pill" style="animation-delay: 260ms">
+            <!-- The Forecast icon from the hub (langsync-hub product-icon.tsx):
+                 a line so far, then the projection, white on the Forecast accent. -->
+            <span class="mark" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 17.5 8 12.5l4 2.5 4-5.5" />
+                <path d="M16 9.5 21 4" stroke-dasharray="1.6 2.4" />
+                <circle cx="16" cy="9.5" r="1.3" fill="currentColor" />
+                <path d="M3 21h18" />
+              </svg>
+            </span>
+            LangSync {{ PRODUCT.name }}
+          </div>
+          <h2 class="kit-rise kit-display panel-title" style="animation-delay: 340ms">
+            {{ PRODUCT.tagline }}
+          </h2>
+          <p class="kit-rise panel-lead" style="animation-delay: 420ms">
+            {{ PRODUCT.loginBlurb }}
+          </p>
+        </div>
       </div>
-    </div>
-  </div>
+    </aside>
+  </main>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { requestOtp, verifyOtp, refreshProfile } from '../store/auth'
+
+// Name and tagline as in the hub (langsync-hub src/lib/config.ts).
+const PRODUCT = {
+  name: 'Forecast',
+  tagline: 'Forecast anything you can measure, from your own data.',
+  loginBlurb:
+    'Upload your own documents, run a simulation of how people are likely to respond, and get a report on what to expect.',
+}
 
 const router = useRouter()
 const route = useRoute()
@@ -104,6 +144,7 @@ const code = ref('')
 const error = ref('')
 const loading = ref(false)
 const resendIn = ref(0)
+const codeRef = ref(null)
 
 let resendTimer = null
 const startResendCooldown = () => {
@@ -123,10 +164,12 @@ const handleRequestCode = async () => {
     step.value = 'code'
     code.value = ''
     startResendCooldown()
+    await nextTick()
+    codeRef.value?.focus()
   } catch (err) {
     error.value = err.status === 429
-      ? 'Too many requests. Please wait a moment and try again.'
-      : (err.message || 'Could not send a code. Please try again.')
+      ? 'Too many requests. Wait a moment and try again.'
+      : (err.message || 'Could not send a code. Try again.')
   } finally {
     loading.value = false
   }
@@ -137,7 +180,16 @@ const resendCode = async () => {
   await handleRequestCode()
 }
 
+// Digits only, six at most; the sixth digit signs in straight away.
+const onCodeInput = (e) => {
+  const v = e.target.value.replace(/\D/g, '').slice(0, 6)
+  code.value = v
+  e.target.value = v
+  if (v.length === 6 && !loading.value) handleVerifyCode()
+}
+
 const handleVerifyCode = async () => {
+  if (code.value.length !== 6) return
   error.value = ''
   loading.value = true
   try {
@@ -162,169 +214,233 @@ const backToEmail = () => {
 </script>
 
 <style scoped>
-.auth-container {
+/* The kit's values (brand.css and the kit login page), as plain CSS. */
+.kit-login {
+  --ink: #0b1220;
+  --muted: #5b6472;
+  --line: #e9edf3;
+  --brand: #0099ff;
+  --brand-ink: #0b64a8;
+  --bad: #c0392b;
   min-height: 100vh;
-  background: #FFFFFF;
-  font-family: 'Avenir Next', 'Inter', system-ui, -apple-system, sans-serif;
+  display: grid;
+  background: #ffffff;
+  color: var(--ink);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.kit-display {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
 }
 
-.navbar {
-  height: 60px;
-  background: #0F0F0F;
-  color: #FFFFFF;
+/* Left */
+.door {
   display: flex;
-  align-items: center;
-  padding: 0 40px;
+  flex-direction: column;
+  padding: 32px 28px;
 }
-
-.nav-brand { font-weight: 700; letter-spacing: -0.5px; font-size: 1.25rem; }
-.brand-lang { color: #7cc4ff; }
-.brand-sync { color: #A78BFA; }
-.brand-forecast { color: #FFFFFF; margin-left: 6px; font-weight: 500; opacity: 0.7; }
-
-.auth-content {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 80px 40px;
-  display: flex;
-  gap: 80px;
-  align-items: flex-start;
-}
-
-.auth-card { flex: 1; max-width: 420px; }
-.auth-header { margin-bottom: 40px; }
-
-.auth-title {
-  font-size: 2.5rem;
+.lockup { height: 32px; width: auto; display: block; }
+.door-middle { flex: 1; display: grid; place-items: center; }
+.door-inner { width: 100%; max-width: 380px; }
+.eyebrow {
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -1px;
-  margin: 0 0 8px;
+  color: var(--brand-ink);
+  margin-bottom: 12px;
 }
-
-.auth-subtitle { color: #6B7280; font-size: 1rem; margin: 0; line-height: 1.5; }
-.auth-form { display: flex; flex-direction: column; gap: 20px; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-
-.form-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #374151;
+.title {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.05;
+  font-size: 40px;
+  margin: 0;
 }
-
-.form-input {
-  padding: 12px 16px;
-  border: 1.5px solid #E5E7EB;
-  border-radius: 4px;
-  font-size: 1rem;
+.lead {
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: 16px;
+  line-height: 1.625;
+}
+.form-wrap { margin-top: 32px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.label { display: block; }
+.label > span { font-size: 13px; font-weight: 600; color: var(--ink); }
+.field {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
   font-family: inherit;
-  transition: border-color 0.2s;
-  background: #FAFAFA;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-
-.form-input:focus { outline: none; border-color: #0099ff; background: #FFFFFF; }
-
-.error-msg {
-  color: #DC2626;
-  font-size: 0.9rem;
-  background: #FEF2F2;
-  padding: 10px 14px;
-  border-radius: 4px;
-  border-left: 3px solid #DC2626;
+.field:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(0, 153, 255, 0.1);
 }
-
-.submit-btn {
-  background: linear-gradient(135deg, #0099ff, #7C3AED);
-  color: #FFFFFF;
-  border: none;
-  padding: 14px;
-  border-radius: 4px;
-  font-size: 1rem;
+.email-field {
+  margin-top: 6px;
+  padding: 12px 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.email-field::placeholder { color: rgba(91, 100, 114, 0.6); }
+.code-field {
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 26px;
   font-weight: 600;
+  letter-spacing: 0.5em;
+  line-height: 1.5;
+}
+.code-field::placeholder { color: rgba(91, 100, 114, 0.3); letter-spacing: 0.5em; }
+.sent-box {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #f6f9fe;
+  padding: 16px 20px;
+}
+.sent-box p { font-size: 14px; color: var(--muted); line-height: 1.625; }
+.strong { font-weight: 600; color: var(--ink); }
+.error { font-size: 13px; color: var(--bad); }
+.primary {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: var(--brand);
+  padding: 12px 0;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #ffffff;
   cursor: pointer;
-  transition: opacity 0.2s;
+  box-shadow: 0 6px 18px rgba(0, 153, 255, 0.28);
+  transition: background-color 0.15s;
+}
+.primary:hover:not(:disabled) { background: var(--brand-ink); }
+.primary:disabled { opacity: 0.6; cursor: default; }
+.links {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.submit-btn:hover:not(:disabled) { opacity: 0.9; }
-.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.code-input {
-  font-size: 1.6rem;
-  letter-spacing: 12px;
-  text-align: center;
-  font-weight: 600;
-  padding-left: 12px;
-}
-
-.code-input::placeholder { letter-spacing: 12px; color: #D1D5DB; }
-
-.auth-links {
-  display: flex;
   justify-content: space-between;
-  margin-top: 4px;
+  padding-top: 4px;
 }
-
-.link-btn {
+.link {
   background: none;
   border: none;
   padding: 0;
-  cursor: pointer;
-  color: #0099ff;
-  font-size: 0.85rem;
   font-family: inherit;
-  font-weight: 500;
-}
-
-.link-btn:hover:not(:disabled) { text-decoration: underline; }
-.link-btn:disabled { color: #9CA3AF; cursor: not-allowed; }
-
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #FFFFFF;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-.change-badge {
-  display: inline-block;
-  background: linear-gradient(135deg, #D97706, #F59E0B);
-  color: #FFFFFF;
-  padding: 4px 12px;
-  font-size: 0.75rem;
+  font-size: 13.5px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  border-radius: 2px;
-  margin-bottom: 16px;
+  cursor: pointer;
 }
+.link.muted { color: var(--muted); }
+.link.muted:hover:not(:disabled) { color: var(--ink); }
+.link.brand { color: var(--brand-ink); }
+.link.brand:hover:not(:disabled) { text-decoration: underline; }
+.link:disabled { opacity: 0.5; cursor: default; }
+.foot { font-size: 12px; color: rgba(91, 100, 114, 0.8); }
 
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.auth-decoration {
-  flex: 1;
-  display: flex;
-  justify-content: center;
+/* Right */
+.panel {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background-color: #f6f9fe;
+  border-left: 1px solid var(--line);
+}
+.field-texture {
+  background-image: radial-gradient(rgba(11, 18, 32, 0.04) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
+}
+.glow { position: absolute; border-radius: 9999px; filter: blur(64px); }
+.glow-blue {
+  right: -96px;
+  top: -96px;
+  width: 440px;
+  height: 440px;
+  opacity: 0.7;
+  background: radial-gradient(circle, #cfe8ff, transparent 62%);
+}
+.glow-violet {
+  right: 40px;
+  bottom: -120px;
+  width: 360px;
+  height: 360px;
+  opacity: 0.6;
+  background: radial-gradient(circle, #e4dcff, transparent 62%);
+}
+.panel-inner {
+  position: relative;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0 64px;
+}
+.panel-copy { max-width: 380px; }
+.pill {
+  display: inline-flex;
   align-items: center;
-  padding-top: 20px;
+  gap: 8px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  padding: 5.5px 12px 5.5px 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand-ink);
+  line-height: 1.5;
+}
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #e64980;
+  color: #ffffff;
+}
+.panel-title {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1.15;
+  margin-top: 20px;
+}
+.panel-lead {
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: 16px;
+  line-height: 1.625;
 }
 
-.auth-logo {
-  max-width: 280px;
-  width: 100%;
-  height: auto;
-  opacity: 0.9;
+/* Entrance, as the kit's rise. */
+@keyframes kit-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.kit-rise {
+  opacity: 0;
+  animation: kit-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kit-rise { animation: none; opacity: 1; }
 }
 
-@media (max-width: 768px) {
-  .auth-content { flex-direction: column; padding: 40px 20px; gap: 40px; }
-  .auth-card { max-width: 100%; }
-  .auth-decoration { display: none; }
+@media (min-width: 640px) {
+  .door { padding: 32px 56px; }
+  .title { font-size: 46px; }
+}
+@media (min-width: 1024px) {
+  .kit-login { grid-template-columns: 1.05fr 1fr; }
+  .panel { display: block; }
 }
 </style>
