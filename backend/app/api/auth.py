@@ -42,6 +42,7 @@ def get_me():
             "company_id": user.company_id,
             "company": company,
             "must_change_password": user.must_change_password,
+            "client_lock": user.client_lock,
         }
     })
 

@@ -7,6 +7,7 @@ const state = reactive({
   profile: null,
   loading: true,
   initialized: false,
+  lockCookie: null, // last ls_client_lock value the profile was fetched with
 })
 
 export const authState = state
@@ -41,6 +42,7 @@ export async function initAuth() {
   const { data: { session } } = await supabase.auth.getSession()
   state.session = session
   if (session) {
+    state.lockCookie = (document.cookie.match(/(?:^|;\s*)ls_client_lock=([^;]*)/) || [])[1] || ''
     await fetchProfile()
   }
   state.loading = false

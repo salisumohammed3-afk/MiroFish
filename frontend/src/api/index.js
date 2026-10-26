@@ -40,8 +40,15 @@ service.interceptors.response.use(
     
     return res
   },
-  error => {
+  async error => {
     console.error('Response error:', error)
+
+    // Client lock on: a link to another company's work lands on the locked
+    // company's home instead of an error.
+    if (error.response?.status === 403 && window.location.pathname !== '/') {
+      const { authState } = await import('../store/auth')
+      if (authState.profile?.client_lock) window.location.assign('/')
+    }
     
     // Handle timeout
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {

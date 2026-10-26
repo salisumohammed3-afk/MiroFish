@@ -10,6 +10,9 @@ from typing import Optional
 from flask import request, g, jsonify
 
 from ..services.supabase_client import get_supabase_admin
+from ..utils.client_lock import (
+    CLIENT_LOCK_COOKIE, HUB_PRODUCT_ID, NO_COMPANY, active_client_lock,
+)
 from ..utils.logger import get_logger
 
 logger = get_logger('mirofish.auth')
@@ -24,6 +27,9 @@ class AuthUser:
     role: str  # super_admin | admin | member | viewer
     display_name: Optional[str] = None
     must_change_password: bool = False
+    # Set while the hub's client lock is on for a super_admin:
+    # {"uses_product": bool}. The user then acts as an admin of that one company.
+    client_lock: Optional[dict] = None
 
 
 def _validate_token(token: str) -> Optional[dict]:
@@ -63,7 +69,7 @@ def _build_auth_user(token: str) -> Optional[AuthUser]:
     if not profile or not profile.get("is_active", True):
         return None
 
-    return AuthUser(
+    user = AuthUser(
         id=user_id,
         email=profile["email"],
         company_id=profile.get("company_id"),
@@ -71,6 +77,19 @@ def _build_auth_user(token: str) -> Optional[AuthUser]:
         display_name=profile.get("display_name"),
         must_change_password=profile.get("must_change_password", False),
     )
+
+    # Client lock (staff only): a super_admin is narrowed to the locked
+    # company, as that company's admin, so every list, direct link and admin
+    # page behaves as it does for the client. It can only ever narrow access.
+    if user.role == "super_admin":
+        lock = active_client_lock(request.cookies.get(CLIENT_LOCK_COOKIE))
+        if lock:
+            ref = lock["products"].get(HUB_PRODUCT_ID)
+            user.role = "admin"
+            user.company_id = ref or NO_COMPANY
+            user.client_lock = {"uses_product": bool(ref)}
+
+    return user
 
 
 def require_auth(f):
