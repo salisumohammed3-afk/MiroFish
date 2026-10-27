@@ -15,3 +15,9 @@ export const listUsers = (companyId) => {
 export const createUser = (data) => service.post('/api/auth/admin/users', data)
 export const updateUser = (id, data) => service.patch(`/api/auth/admin/users/${id}`, data)
 export const resetUserPassword = (id, data) => service.post(`/api/auth/admin/users/${id}/reset-password`, data)
+
+// API keys (LangSync admins only): the full key comes back once, from createApiKey.
+export const listApiKeys = () => service.get('/api/auth/admin/api-keys')
+export const countApiKeys = () => service.get('/api/auth/admin/api-keys/count')
+export const createApiKey = (data) => service.post('/api/auth/admin/api-keys', data)
+export const cancelApiKey = (id) => service.delete(`/api/auth/admin/api-keys/${id}`)

@@ -11,6 +11,7 @@ import LoginHandOff from '../views/LoginHandOff.vue'
 import NotInUseView from '../views/NotInUseView.vue'
 import { startPassKeepAlive } from '../lib/hub'
 import AdminView from '../views/AdminView.vue'
+import ApiDocsView from '../views/ApiDocsView.vue'
 
 // Shown to staff while the hub's client lock is on for a client that has no
 // Forecast company. Names nobody.
@@ -94,6 +95,13 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: AdminView,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  // How to use Forecast's API and its Claude connection. LangSync admins only.
+  {
+    path: '/docs/api',
+    name: 'ApiDocs',
+    component: ApiDocsView,
     meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]

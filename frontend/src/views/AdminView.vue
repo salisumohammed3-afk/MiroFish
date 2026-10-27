@@ -23,10 +23,14 @@
         >
           <span class="tab-icon">{{ tab.icon }}</span>
           {{ tab.label }}
+          <span v-if="tab.id === 'apikeys' && keyCount" class="tab-count">{{ keyCount }}</span>
         </button>
       </div>
 
       <div class="admin-main">
+        <!-- API keys (LangSync admins only, like the rest of this area) -->
+        <ApiKeysPanel v-if="activeTab === 'apikeys'" @changed="loadKeyCount" />
+
         <!-- Companies -->
         <div v-if="activeTab === 'companies'" class="panel">
           <div class="panel-header">
@@ -188,10 +192,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { signOut } from '../store/auth'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import ApiKeysPanel from '../components/ApiKeysPanel.vue'
 import {
   listCompanies, createCompany, deleteCompany,
-  listUsers, createUser, updateUser,
+  listUsers, createUser, updateUser, countApiKeys,
 } from '../api/auth'
 
 const router = useRouter()
@@ -199,8 +204,10 @@ const router = useRouter()
 const tabs = [
   { id: 'companies', label: 'Companies', icon: '◆' },
   { id: 'users', label: 'Users', icon: '◇' },
+  { id: 'apikeys', label: 'API keys', icon: '◈' },
 ]
-const activeTab = ref('companies')
+const route = useRoute()
+const activeTab = ref(route.query.tab === 'apikeys' ? 'apikeys' : 'companies')
 
 const companies = ref([])
 const users = ref([])
@@ -226,9 +233,16 @@ const loadUsers = async () => {
   try { users.value = (await listUsers(userFilter.value || undefined)).data } catch (e) { console.error(e) }
 }
 
+// The count beside the API keys tab. A failure says so instead of breaking the page.
+const keyCount = ref('')
+const loadKeyCount = async () => {
+  try { keyCount.value = (await countApiKeys()).data.label } catch (e) { keyCount.value = 'Could not count' }
+}
+
 onMounted(() => {
   loadCompanies()
   loadUsers()
+  loadKeyCount()
 })
 
 const handleCreateCompany = async () => {
@@ -372,6 +386,7 @@ const handleSignOut = async () => {
 .sidebar-item:hover { background: #F9FAFB; color: #111827; }
 .sidebar-item.active { color: #0099ff; background: rgba(79, 70, 229, 0.06); border-right: 2px solid #0099ff; font-weight: 600; }
 .tab-icon { font-size: 0.8rem; }
+.tab-count { margin-left: auto; font-size: 0.78rem; font-weight: 500; color: #9CA3AF; }
 
 .admin-main {
   flex: 1;
