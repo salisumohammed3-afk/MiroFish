@@ -45,8 +45,24 @@ class Config:
     # Forecast's tables live in their own section of the shared LangSync Platform database.
     SUPABASE_SCHEMA = os.environ.get('SUPABASE_SCHEMA', 'public')
     
-    # Zep configuration
-    ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
+    # Knowledge map store: Graphiti (a library) on a self-hosted FalkorDB.
+    # FalkorDB is reached over Railway's private network only.
+    FALKORDB_HOST = os.environ.get('FALKORDB_HOST')
+    FALKORDB_PORT = int(os.environ.get('FALKORDB_PORT', '6379'))
+    FALKORDB_USERNAME = os.environ.get('FALKORDB_USERNAME') or None
+    FALKORDB_PASSWORD = os.environ.get('FALKORDB_PASSWORD') or None
+    # Claude does the reading (entity and relationship extraction).
+    GRAPHITI_ANTHROPIC_API_KEY = os.environ.get('GRAPHITI_ANTHROPIC_API_KEY')
+    GRAPHITI_ANTHROPIC_BASE_URL = os.environ.get('GRAPHITI_ANTHROPIC_BASE_URL', 'https://api.anthropic.com')
+    GRAPHITI_LLM_MODEL = os.environ.get('GRAPHITI_LLM_MODEL', 'claude-haiku-4-5')
+    GRAPHITI_LLM_MAX_TOKENS = int(os.environ.get('GRAPHITI_LLM_MAX_TOKENS', '8192'))
+    GRAPHITI_MAX_COROUTINES = int(os.environ.get('GRAPHITI_MAX_COROUTINES', '5'))
+    # Embeddings and reranking run locally (sentence-transformers), no key.
+    # Never change the embedding model or size once maps exist: stored vectors
+    # would no longer match new ones.
+    GRAPHITI_EMBEDDING_MODEL = os.environ.get('GRAPHITI_EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')
+    GRAPHITI_EMBEDDING_DIM = int(os.environ.get('GRAPHITI_EMBEDDING_DIM', '384'))
+    GRAPHITI_RERANK_MODEL = os.environ.get('GRAPHITI_RERANK_MODEL', 'cross-encoder/ms-marco-MiniLM-L-6-v2')
     
     # File upload configuration
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
@@ -54,8 +70,10 @@ class Config:
     ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt', 'markdown'}
     
     # Text processing configuration
-    DEFAULT_CHUNK_SIZE = 500  # Default chunk size
-    DEFAULT_CHUNK_OVERLAP = 50  # Default overlap size
+    # Graphiti makes several Claude calls per chunk, so chunks are larger than
+    # they were with Zep (500 / 50) to keep the number of calls down.
+    DEFAULT_CHUNK_SIZE = int(os.environ.get('GRAPH_CHUNK_SIZE', '3000'))
+    DEFAULT_CHUNK_OVERLAP = int(os.environ.get('GRAPH_CHUNK_OVERLAP', '200'))
     
     # OASIS simulation configuration
     OASIS_DEFAULT_MAX_ROUNDS = int(os.environ.get('OASIS_DEFAULT_MAX_ROUNDS', '10'))
@@ -82,6 +100,8 @@ class Config:
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY is not configured")
-        if not cls.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY is not configured")
+        if not cls.FALKORDB_HOST:
+            errors.append("FALKORDB_HOST is not configured")
+        if not cls.GRAPHITI_ANTHROPIC_API_KEY:
+            errors.append("GRAPHITI_ANTHROPIC_API_KEY is not configured")
         return errors

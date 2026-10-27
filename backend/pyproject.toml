@@ -16,8 +16,12 @@ dependencies = [
     # LLM related
     "openai>=1.0.0",
     
-    # Zep Cloud
-    "zep-cloud==3.13.0",
+    # Knowledge graph: Graphiti as a library on a self-hosted FalkorDB
+    # (pinned exactly; Graphiti changes behaviour between minor releases)
+    "graphiti-core[anthropic,falkordb]==0.31.2",
+    # Graphiti's Anthropic client sends temperature and forced tool use, which
+    # the 0.x SDK line still sends with the older API version. Stay on 0.x.
+    "anthropic>=0.49.0,<1",
     
     # OASIS social media simulation
     "camel-oasis==0.2.5",
@@ -57,6 +61,12 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
 ]
+
+[tool.uv]
+# camel-oasis 0.2.5 pins neo4j==5.23.0 but graphiti-core needs neo4j>=5.26.
+# OASIS only uses neo4j.GraphDatabase in an optional backend we never enable,
+# and that API is unchanged across 5.x, so let Graphiti's floor win.
+override-dependencies = ["neo4j>=5.26,<6"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

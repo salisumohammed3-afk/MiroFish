@@ -13,8 +13,11 @@ flask-cors>=6.0.0
 # OpenAI SDK (unified LLM calls using OpenAI format)
 openai>=1.0.0
 
-# ============= Zep Cloud =============
-zep-cloud==3.13.0
+# ============= Knowledge map (Graphiti on FalkorDB) =============
+# Note: camel-oasis pins neo4j==5.23.0 and graphiti-core needs neo4j>=5.26.
+# pip cannot override that; install with uv (pyproject.toml carries the override).
+graphiti-core[anthropic,falkordb]==0.31.2
+anthropic>=0.49.0,<1
 
 # ============= OASIS Social Media Simulation =============
 # OASIS social simulation framework

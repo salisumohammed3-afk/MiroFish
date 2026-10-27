@@ -122,9 +122,11 @@ LLM_API_KEY=your_api_key
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_MODEL_NAME=qwen-plus
 
-# Zep Cloud 配置
-# 每月免费额度即可支撑简单使用：https://app.getzep.com/
-ZEP_API_KEY=your_zep_api_key
+# Knowledge map: Graphiti on a self-hosted FalkorDB
+# docker run -p 6379:6379 -e BROWSER=0 falkordb/falkordb:v4.22.2
+FALKORDB_HOST=localhost
+FALKORDB_PORT=6379
+GRAPHITI_ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
 #### 2. 安装依赖

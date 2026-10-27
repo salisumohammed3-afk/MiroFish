@@ -24,6 +24,14 @@ WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./backend/
 RUN cd backend && uv sync --frozen
 
+# The knowledge map embeds and reranks locally. Bake both small models into the
+# image so a cold start never has to download them (keep these names in step
+# with GRAPHITI_EMBEDDING_MODEL / GRAPHITI_RERANK_MODEL in app/config.py).
+ENV HF_HOME=/app/hf-cache
+RUN cd backend && uv run --frozen --no-sync python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('BAAI/bge-small-en-v1.5', device='cpu'); CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device='cpu')"
+ENV HF_HUB_OFFLINE=1
+ENV GRAPHITI_TELEMETRY_ENABLED=false
+
 COPY backend/ ./backend/
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 COPY .env* ./
