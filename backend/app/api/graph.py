@@ -12,6 +12,7 @@ from . import graph_bp
 from ..config import Config
 from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import GraphBuilderService
+from ..services import graph_store
 from ..services.text_processor import TextProcessor
 from ..services.ownership import OwnershipService
 from ..utils.file_parser import FileParser
@@ -296,9 +297,7 @@ def build_graph():
         logger.info("=== Starting graph build ===")
         
         # Check configuration
-        errors = []
-        if not Config.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY not configured")
+        errors = [f"{name} not configured" for name in graph_store.missing_config()]
         if errors:
             logger.error(f"Configuration error: {errors}")
             return jsonify({
@@ -341,8 +340,16 @@ def build_graph():
                 "task_id": project.graph_build_task_id
             }), 400
         
-        # If force rebuild, reset status
+        # If force rebuild, reset status (and drop the old map if it still exists)
         if force and project.status in [ProjectStatus.GRAPH_BUILDING, ProjectStatus.FAILED, ProjectStatus.GRAPH_COMPLETED]:
+            old_graph_id = project.graph_id
+            if old_graph_id:
+                try:
+                    old_builder = GraphBuilderService()
+                    if old_builder.graph_exists(old_graph_id):
+                        old_builder.delete_graph(old_graph_id)
+                except Exception as e:
+                    logger.warning(f"Could not delete old map {old_graph_id} before rebuild: {e}")
             project.status = ProjectStatus.ONTOLOGY_GENERATED
             project.graph_id = None
             project.graph_build_task_id = None
@@ -350,8 +357,10 @@ def build_graph():
         
         # Get configuration
         graph_name = data.get('graph_name', project.name or 'MiroFish Graph')
-        chunk_size = data.get('chunk_size', project.chunk_size or Config.DEFAULT_CHUNK_SIZE)
-        chunk_overlap = data.get('chunk_overlap', project.chunk_overlap or Config.DEFAULT_CHUNK_OVERLAP)
+        # Projects saved before the move to Graphiti carry the old 500/50 chunk
+        # settings; maps are now built from larger chunks to keep Claude calls down.
+        chunk_size = data.get('chunk_size') or Config.DEFAULT_CHUNK_SIZE
+        chunk_overlap = data.get('chunk_overlap') or Config.DEFAULT_CHUNK_OVERLAP
         
         # Update project configuration
         project.chunk_size = chunk_size
@@ -395,7 +404,7 @@ def build_graph():
                 )
                 
                 # Create graph build service
-                builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+                builder = GraphBuilderService()
                 
                 # Chunking
                 task_manager.update_task(
@@ -413,7 +422,7 @@ def build_graph():
                 # Create graph
                 task_manager.update_task(
                     task_id,
-                    message="Creating Zep graph...",
+                    message="Creating knowledge map...",
                     progress=10
                 )
                 graph_id = builder.create_graph(name=graph_name)
@@ -430,9 +439,11 @@ def build_graph():
                 )
                 builder.set_ontology(graph_id, ontology)
                 
-                # Add text (progress_callback signature is (msg, progress_ratio))
+                # Add text (progress_callback signature is (msg, progress_ratio)).
+                # Each chunk is fully read by Claude before the next starts, so
+                # there is no separate "waiting for processing" phase any more.
                 def add_progress_callback(msg, progress_ratio):
-                    progress = 15 + int(progress_ratio * 40)  # 15% - 55%
+                    progress = 15 + int(progress_ratio * 75)  # 15% - 90%
                     task_manager.update_task(
                         task_id,
                         message=msg,
@@ -441,33 +452,15 @@ def build_graph():
                 
                 task_manager.update_task(
                     task_id,
-                    message=f"Starting to add {total_chunks} text chunks...",
+                    message=f"Reading {total_chunks} text chunks into the map...",
                     progress=15
                 )
                 
-                episode_uuids = builder.add_text_batches(
+                builder.add_text_batches(
                     graph_id, 
                     chunks,
-                    batch_size=3,
                     progress_callback=add_progress_callback
                 )
-                
-                # Wait for Zep processing (query processed status of each episode)
-                task_manager.update_task(
-                    task_id,
-                    message="Waiting for Zep to process data...",
-                    progress=55
-                )
-                
-                def wait_progress_callback(msg, progress_ratio):
-                    progress = 55 + int(progress_ratio * 35)  # 55% - 90%
-                    task_manager.update_task(
-                        task_id,
-                        message=msg,
-                        progress=progress
-                    )
-                
-                builder._wait_for_episodes(episode_uuids, wait_progress_callback)
                 
                 # Get graph data
                 task_manager.update_task(
@@ -580,19 +573,28 @@ def get_graph_data(graph_id: str):
     Get graph data (nodes and edges)
     """
     try:
-        if not Config.ZEP_API_KEY:
+        missing = graph_store.missing_config()
+        if missing:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY not configured"
+                "error": "Knowledge map store not configured: " + ", ".join(missing)
             }), 500
         
-        builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+        builder = GraphBuilderService()
         graph_data = builder.get_graph_data(graph_id)
         
         return jsonify({
             "success": True,
             "data": graph_data
         })
+    
+    except graph_store.GraphNotFound as e:
+        return jsonify({
+            "success": False,
+            "code": "graph_missing",
+            "error": str(e),
+            "graph_id": graph_id,
+        }), 404
         
     except Exception as e:
         return jsonify({
@@ -605,16 +607,17 @@ def get_graph_data(graph_id: str):
 @graph_bp.route('/delete/<graph_id>', methods=['DELETE'])
 def delete_graph(graph_id: str):
     """
-    Delete a Zep graph
+    Delete a knowledge map
     """
     try:
-        if not Config.ZEP_API_KEY:
+        missing = graph_store.missing_config()
+        if missing:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY not configured"
+                "error": "Knowledge map store not configured: " + ", ".join(missing)
             }), 500
         
-        builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+        builder = GraphBuilderService()
         builder.delete_graph(graph_id)
         
         return jsonify({

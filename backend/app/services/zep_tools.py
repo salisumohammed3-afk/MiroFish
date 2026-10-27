@@ -1,5 +1,6 @@
 """
-Zep Retrieval Tools Service
+Graph Retrieval Tools Service (knowledge map: graph_store, Graphiti on FalkorDB)
+The module and class keep their old Zep-era names so importers did not change.
 Wraps graph search, node reading, edge querying, and other tools for use by the Report Agent
 
 Core retrieval tools (optimized):
@@ -13,12 +14,10 @@ import json
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 
-from zep_cloud.client import Zep
-
 from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
-from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
+from . import graph_store
 
 logger = get_logger('mirofish.zep_tools')
 
@@ -398,12 +397,9 @@ class ZepToolsService:
     MAX_RETRIES = 3
     RETRY_DELAY = 2.0
     
-    def __init__(self, api_key: Optional[str] = None, llm_client: Optional[LLMClient] = None):
-        self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY is not configured")
-        
-        self.client = Zep(api_key=self.api_key)
+    def __init__(self, llm_client: Optional[LLMClient] = None,
+                 store: Optional["graph_store.GraphStore"] = None):
+        self.store = store or graph_store.get_store()
         self._llm_client = llm_client
         logger.info("ZepToolsService initialized")
     
@@ -423,17 +419,19 @@ class ZepToolsService:
         for attempt in range(max_retries):
             try:
                 return func()
+            except graph_store.GraphNotFound:
+                raise
             except Exception as e:
                 last_exception = e
                 if attempt < max_retries - 1:
                     logger.warning(
-                        f"Zep {operation_name} attempt {attempt + 1} failed: {str(e)[:100]}, "
+                        f"Graph {operation_name} attempt {attempt + 1} failed: {str(e)[:100]}, "
                         f"retrying in {delay:.1f}s..."
                     )
                     time.sleep(delay)
                     delay *= 2
                 else:
-                    logger.error(f"Zep {operation_name} still failed after {max_retries} attempts: {str(e)}")
+                    logger.error(f"Graph {operation_name} still failed after {max_retries} attempts: {str(e)}")
         
         raise last_exception
     
@@ -448,7 +446,7 @@ class ZepToolsService:
         Graph semantic search
         
         Uses hybrid search (semantic + BM25) to search for relevant information in the graph.
-        Falls back to local keyword matching if Zep Cloud search API is unavailable.
+        Falls back to local keyword matching if the hybrid search fails.
         
         Args:
             graph_id: Graph ID (Standalone Graph)
@@ -463,9 +461,9 @@ class ZepToolsService:
         
         try:
             search_results = self._call_with_retry(
-                func=lambda: self.client.graph.search(
-                    graph_id=graph_id,
-                    query=query,
+                func=lambda: self.store.search(
+                    graph_id,
+                    query,
                     limit=limit,
                     scope=scope,
                     reranker="cross_encoder"
@@ -477,28 +475,26 @@ class ZepToolsService:
             edges = []
             nodes = []
             
-            if hasattr(search_results, 'edges') and search_results.edges:
-                for edge in search_results.edges:
-                    if hasattr(edge, 'fact') and edge.fact:
-                        facts.append(edge.fact)
-                    edges.append({
-                        "uuid": getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', ''),
-                        "name": getattr(edge, 'name', ''),
-                        "fact": getattr(edge, 'fact', ''),
-                        "source_node_uuid": getattr(edge, 'source_node_uuid', ''),
-                        "target_node_uuid": getattr(edge, 'target_node_uuid', ''),
-                    })
+            for edge in search_results.get("edges", []):
+                if edge.get("fact"):
+                    facts.append(edge["fact"])
+                edges.append({
+                    "uuid": edge["uuid"],
+                    "name": edge["name"],
+                    "fact": edge["fact"],
+                    "source_node_uuid": edge["source_node_uuid"],
+                    "target_node_uuid": edge["target_node_uuid"],
+                })
             
-            if hasattr(search_results, 'nodes') and search_results.nodes:
-                for node in search_results.nodes:
-                    nodes.append({
-                        "uuid": getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
-                        "name": getattr(node, 'name', ''),
-                        "labels": getattr(node, 'labels', []),
-                        "summary": getattr(node, 'summary', ''),
-                    })
-                    if hasattr(node, 'summary') and node.summary:
-                        facts.append(f"[{node.name}]: {node.summary}")
+            for node in search_results.get("nodes", []):
+                nodes.append({
+                    "uuid": node["uuid"],
+                    "name": node["name"],
+                    "labels": node["labels"],
+                    "summary": node["summary"],
+                })
+                if node.get("summary"):
+                    facts.append(f"[{node['name']}]: {node['summary']}")
             
             logger.info(f"Search completed: found {len(facts)} relevant facts")
             
@@ -510,8 +506,10 @@ class ZepToolsService:
                 total_count=len(facts)
             )
             
+        except graph_store.GraphNotFound:
+            raise
         except Exception as e:
-            logger.warning(f"Zep Search API failed, falling back to local search: {str(e)}")
+            logger.warning(f"Graph search failed, falling back to local search: {str(e)}")
             return self._local_search(graph_id, query, limit, scope)
     
     def _local_search(
@@ -522,7 +520,7 @@ class ZepToolsService:
         scope: str = "edges"
     ) -> SearchResult:
         """
-        Local keyword matching search (fallback for Zep Search API)
+        Local keyword matching search (fallback for the hybrid search)
         
         Fetches all edges/nodes, then performs keyword matching locally
         
@@ -624,18 +622,15 @@ class ZepToolsService:
         """
         logger.info(f"Fetching all nodes for graph {graph_id}...")
 
-        nodes = fetch_all_nodes(self.client, graph_id)
+        nodes = self.store.get_all_nodes(graph_id)
 
-        result = []
-        for node in nodes:
-            node_uuid = getattr(node, 'uuid_', None) or getattr(node, 'uuid', None) or ""
-            result.append(NodeInfo(
-                uuid=str(node_uuid) if node_uuid else "",
-                name=node.name or "",
-                labels=node.labels or [],
-                summary=node.summary or "",
-                attributes=node.attributes or {}
-            ))
+        result = [NodeInfo(
+            uuid=node["uuid"],
+            name=node["name"],
+            labels=node["labels"],
+            summary=node["summary"],
+            attributes=node["attributes"]
+        ) for node in nodes]
 
         logger.info(f"Fetched {len(result)} nodes")
         return result
@@ -653,35 +648,36 @@ class ZepToolsService:
         """
         logger.info(f"Fetching all edges for graph {graph_id}...")
 
-        edges = fetch_all_edges(self.client, graph_id)
+        edges = self.store.get_all_edges(graph_id)
 
         result = []
         for edge in edges:
-            edge_uuid = getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', None) or ""
             edge_info = EdgeInfo(
-                uuid=str(edge_uuid) if edge_uuid else "",
-                name=edge.name or "",
-                fact=edge.fact or "",
-                source_node_uuid=edge.source_node_uuid or "",
-                target_node_uuid=edge.target_node_uuid or ""
+                uuid=edge["uuid"],
+                name=edge["name"],
+                fact=edge["fact"],
+                source_node_uuid=edge["source_node_uuid"] or "",
+                target_node_uuid=edge["target_node_uuid"] or ""
             )
 
             if include_temporal:
-                edge_info.created_at = getattr(edge, 'created_at', None)
-                edge_info.valid_at = getattr(edge, 'valid_at', None)
-                edge_info.invalid_at = getattr(edge, 'invalid_at', None)
-                edge_info.expired_at = getattr(edge, 'expired_at', None)
+                # ISO 8601 strings or None
+                edge_info.created_at = edge["created_at"]
+                edge_info.valid_at = edge["valid_at"]
+                edge_info.invalid_at = edge["invalid_at"]
+                edge_info.expired_at = edge["expired_at"]
 
             result.append(edge_info)
 
         logger.info(f"Fetched {len(result)} edges")
         return result
     
-    def get_node_detail(self, node_uuid: str) -> Optional[NodeInfo]:
+    def get_node_detail(self, graph_id: str, node_uuid: str) -> Optional[NodeInfo]:
         """
         Get detailed information for a single node
         
         Args:
+            graph_id: Graph ID (node uuids are only unique within a map)
             node_uuid: Node UUID
             
         Returns:
@@ -691,7 +687,7 @@ class ZepToolsService:
         
         try:
             node = self._call_with_retry(
-                func=lambda: self.client.graph.node.get(uuid_=node_uuid),
+                func=lambda: self.store.get_node(graph_id, node_uuid),
                 operation_name=f"get node details(uuid={node_uuid[:8]}...)"
             )
             
@@ -699,12 +695,14 @@ class ZepToolsService:
                 return None
             
             return NodeInfo(
-                uuid=getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
-                name=node.name or "",
-                labels=node.labels or [],
-                summary=node.summary or "",
-                attributes=node.attributes or {}
+                uuid=node["uuid"],
+                name=node["name"],
+                labels=node["labels"],
+                summary=node["summary"],
+                attributes=node["attributes"]
             )
+        except graph_store.GraphNotFound:
+            raise
         except Exception as e:
             logger.error(f"Failed to get node details: {str(e)}")
             return None
@@ -993,7 +991,7 @@ class ZepToolsService:
             if not uuid:
                 continue
             try:
-                node = self.get_node_detail(uuid)
+                node = self.get_node_detail(graph_id, uuid)
                 if node:
                     node_map[uuid] = node
                     entity_type = next((l for l in node.labels if l not in ["Entity", "Node"]), "Entity")

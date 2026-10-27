@@ -1,6 +1,6 @@
 """
 Simulation-related API routes
-Step2: Zep entity reading & filtering, OASIS simulation preparation & execution (fully automated)
+Step2: Knowledge map entity reading & filtering, OASIS simulation preparation & execution (fully automated)
 """
 
 import os
@@ -10,6 +10,7 @@ from flask import request, jsonify, send_file, g
 from . import simulation_bp
 from ..config import Config
 from ..services.zep_entity_reader import ZepEntityReader
+from ..services import graph_store
 from ..services.oasis_profile_generator import OasisProfileGenerator
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
@@ -18,6 +19,18 @@ from ..utils.logger import get_logger
 from ..models.project import ProjectManager
 
 logger = get_logger('mirofish.api.simulation')
+
+
+def _graph_missing_response(err):
+    """A project whose knowledge map no longer exists (for example one built on
+    the old Zep service) gets a plain message and a code the frontend uses to
+    offer a rebuild."""
+    return jsonify({
+        "success": False,
+        "code": "graph_missing",
+        "error": str(err),
+        "graph_id": getattr(err, "graph_id", None),
+    }), 404
 
 
 # Interview prompt optimization prefix
@@ -57,10 +70,11 @@ def get_graph_entities(graph_id: str):
         enrich: Whether to include related edge information (default true)
     """
     try:
-        if not Config.ZEP_API_KEY:
+        missing = graph_store.missing_config()
+        if missing:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY not configured"
+                "error": "Knowledge map store not configured: " + ", ".join(missing)
             }), 500
         
         entity_types_str = request.args.get('entity_types', '')
@@ -81,6 +95,8 @@ def get_graph_entities(graph_id: str):
             "data": result.to_dict()
         })
         
+    except graph_store.GraphNotFound as e:
+        return _graph_missing_response(e)
     except Exception as e:
         logger.error(f"Failed to fetch graph entities: {str(e)}")
         return jsonify({
@@ -94,10 +110,11 @@ def get_graph_entities(graph_id: str):
 def get_entity_detail(graph_id: str, entity_uuid: str):
     """Get detailed information for a single entity"""
     try:
-        if not Config.ZEP_API_KEY:
+        missing = graph_store.missing_config()
+        if missing:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY not configured"
+                "error": "Knowledge map store not configured: " + ", ".join(missing)
             }), 500
         
         reader = ZepEntityReader()
@@ -114,6 +131,8 @@ def get_entity_detail(graph_id: str, entity_uuid: str):
             "data": entity.to_dict()
         })
         
+    except graph_store.GraphNotFound as e:
+        return _graph_missing_response(e)
     except Exception as e:
         logger.error(f"Failed to get entity details: {str(e)}")
         return jsonify({
@@ -127,10 +146,11 @@ def get_entity_detail(graph_id: str, entity_uuid: str):
 def get_entities_by_type(graph_id: str, entity_type: str):
     """Get all entities of a specified type"""
     try:
-        if not Config.ZEP_API_KEY:
+        missing = graph_store.missing_config()
+        if missing:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY not configured"
+                "error": "Knowledge map store not configured: " + ", ".join(missing)
             }), 500
         
         enrich = request.args.get('enrich', 'true').lower() == 'true'
@@ -151,6 +171,8 @@ def get_entities_by_type(graph_id: str, entity_type: str):
             }
         })
         
+    except graph_store.GraphNotFound as e:
+        return _graph_missing_response(e)
     except Exception as e:
         logger.error(f"Failed to get entities: {str(e)}")
         return jsonify({
@@ -376,7 +398,7 @@ def prepare_simulation():
     
     Steps:
     1. Check if preparation work is already complete
-    2. Read and filter entities from Zep graph
+    2. Read and filter entities from the knowledge map
     3. Generate OASIS Agent Profile for each entity (with retry mechanism)
     4. LLM intelligently generates simulation config (with retry mechanism)
     5. Save config files and preset scripts
@@ -488,6 +510,8 @@ def prepare_simulation():
             state.entities_count = filtered_preview.filtered_count
             state.entity_types = list(filtered_preview.entity_types)
             logger.info(f"Expected entity count: {filtered_preview.filtered_count}, types: {filtered_preview.entity_types}")
+        except graph_store.GraphNotFound as e:
+            return _graph_missing_response(e)
         except Exception as e:
             logger.warning(f"Failed to synchronously fetch entity count (will retry in background task): {e}")
             # Failure does not affect subsequent flow; background task will re-fetch
@@ -1469,7 +1493,7 @@ def start_simulation():
             "simulation_id": "sim_xxxx",          // Required, simulation ID
             "platform": "parallel",                // Optional: twitter / reddit / parallel (default)
             "max_rounds": 100,                     // Optional: max simulation rounds, used to truncate overly long simulations
-            "enable_graph_memory_update": false,   // Optional: whether to dynamically update Agent activity to Zep graph memory
+            "enable_graph_memory_update": false,   // Optional: whether to dynamically update Agent activity into the knowledge map
             "force": false                         // Optional: force restart (stops running simulation and cleans up logs)
         }
 
@@ -1480,7 +1504,7 @@ def start_simulation():
         - Suitable for scenarios requiring re-running the simulation
 
     About enable_graph_memory_update:
-        - When enabled, all Agent activities (posting, commenting, liking, etc.) are updated to the Zep graph in real-time
+        - When enabled, all Agent activities (posting, commenting, liking, etc.) are added to the knowledge map as the simulation runs
         - This allows the graph to "remember" the simulation process for subsequent analysis or AI conversations
         - Requires the simulation's associated project to have a valid graph_id
         - Uses batch update mechanism to reduce API call frequency

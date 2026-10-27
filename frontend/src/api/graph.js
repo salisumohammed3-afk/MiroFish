@@ -58,6 +58,18 @@ export function getGraphData(graphId) {
 }
 
 /**
+ * When a request failed because the project's knowledge map no longer exists
+ * (maps built before October 2026 lived in a service Forecast no longer uses),
+ * return the server's plain message; otherwise null.
+ * @param {Error} err - Error thrown by the API client
+ * @returns {String|null}
+ */
+export function graphMissingMessage(err) {
+  const data = err?.response?.data
+  return data && data.code === 'graph_missing' ? (data.error || 'This knowledge map is missing.') : null
+}
+
+/**
  * Get project info
  * @param {String} projectId - Project ID
  * @returns {Promise}

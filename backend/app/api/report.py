@@ -17,9 +17,27 @@ from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
 from ..utils.llm_client import LLMClient
 from ..services.zep_tools import ZepToolsService
+from ..services import graph_store
 from ..utils.logger import get_logger
 
 logger = get_logger('mirofish.api.report')
+
+
+def _graph_missing_response(graph_id):
+    """None when the knowledge map exists, else a plain 404 telling the user to
+    rebuild it (maps from the old Zep service are gone)."""
+    try:
+        if graph_store.get_store().graph_exists(graph_id):
+            return None
+    except graph_store.GraphStoreNotConfigured as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    err = graph_store.GraphNotFound(graph_id)
+    return jsonify({
+        "success": False,
+        "code": "graph_missing",
+        "error": str(err),
+        "graph_id": graph_id,
+    }), 404
 
 
 def _create_report_llm_and_tools():
@@ -115,6 +133,9 @@ def generate_report():
                 "success": False,
                 "error": "Missing graph ID. Please ensure the graph has been built"
             }), 400
+        missing_response = _graph_missing_response(graph_id)
+        if missing_response:
+            return missing_response
         
         simulation_requirement = project.simulation_requirement
         if not simulation_requirement:
@@ -559,6 +580,9 @@ def chat_with_report_agent():
                 "success": False,
                 "error": "Missing graph ID"
             }), 400
+        missing_response = _graph_missing_response(graph_id)
+        if missing_response:
+            return missing_response
         
         simulation_requirement = project.simulation_requirement or ""
         
@@ -995,6 +1019,8 @@ def search_graph_tool():
             "data": result.to_dict()
         })
         
+    except graph_store.GraphNotFound:
+        return _graph_missing_response(graph_id)
     except Exception as e:
         logger.error(f"Graph search failed: {str(e)}")
         return jsonify({
@@ -1035,6 +1061,8 @@ def get_graph_statistics_tool():
             "data": result
         })
         
+    except graph_store.GraphNotFound:
+        return _graph_missing_response(graph_id)
     except Exception as e:
         logger.error(f"Failed to get graph statistics: {str(e)}")
         return jsonify({

@@ -1,6 +1,8 @@
 """
-Zep Graph Memory Update Service
-Dynamically updates Agent activities from simulations into the Zep graph
+Graph Memory Update Service
+Dynamically updates Agent activities from simulations into the project's
+knowledge map (graph_store: Graphiti on FalkorDB). The module and class keep
+their old Zep-era names so importers did not change.
 """
 
 import os
@@ -9,13 +11,11 @@ import threading
 import json
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from queue import Queue, Empty
 
-from zep_cloud.client import Zep
-
-from ..config import Config
 from ..utils.logger import get_logger
+from . import graph_store
 
 logger = get_logger('mirofish.zep_graph_memory_updater')
 
@@ -212,7 +212,9 @@ class ZepGraphMemoryUpdater:
     """
     
     # Batch send size (how many per platform before sending)
-    BATCH_SIZE = 5
+    # Each batch becomes one Graphiti episode, which costs several Claude calls,
+    # so activities are grouped more coarsely than they were for Zep (5).
+    BATCH_SIZE = 20
     
     # Platform name mapping (for console display)
     PLATFORM_DISPLAY_NAMES = {
@@ -224,24 +226,21 @@ class ZepGraphMemoryUpdater:
     SEND_INTERVAL = 0.5
     
     # Retry configuration
-    MAX_RETRIES = 3
+    # graph_store.add_text already retries once on its own
+    MAX_RETRIES = 2
     RETRY_DELAY = 2  # seconds
     
-    def __init__(self, graph_id: str, api_key: Optional[str] = None):
+    def __init__(self, graph_id: str, store: Optional["graph_store.GraphStore"] = None):
         """
         Initialize updater
         
         Args:
-            graph_id: Zep graph ID
-            api_key: Zep API Key (optional, defaults to reading from config)
+            graph_id: Knowledge map id
+            store: Graph store (optional, defaults to the process-wide one)
         """
         self.graph_id = graph_id
-        self.api_key = api_key or Config.ZEP_API_KEY
-        
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY is not configured")
-        
-        self.client = Zep(api_key=self.api_key)
+        self.store = store or graph_store.get_store()
+        self._batch_number = 0
         
         # Activity queue
         self._activity_queue: Queue = Queue()
@@ -404,10 +403,14 @@ class ZepGraphMemoryUpdater:
         # Send with retry
         for attempt in range(self.MAX_RETRIES):
             try:
-                self.client.graph.add(
-                    graph_id=self.graph_id,
-                    type="text",
-                    data=combined_text
+                self._batch_number += 1
+                self.store.add_text(
+                    self.graph_id,
+                    combined_text,
+                    name=f"{platform}-activity-{self._batch_number:04d}",
+                    source="message",
+                    source_description=f"Forecast simulation activity ({self._get_platform_display_name(platform)})",
+                    reference_time=datetime.now(timezone.utc),
                 )
                 
                 self._total_sent += 1
@@ -419,10 +422,10 @@ class ZepGraphMemoryUpdater:
                 
             except Exception as e:
                 if attempt < self.MAX_RETRIES - 1:
-                    logger.warning(f"Batch send to Zep failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}")
+                    logger.warning(f"Batch send to graph failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}")
                     time.sleep(self.RETRY_DELAY * (attempt + 1))
                 else:
-                    logger.error(f"Batch send to Zep failed after {self.MAX_RETRIES} retries: {e}")
+                    logger.error(f"Batch send to graph failed after {self.MAX_RETRIES} retries: {e}")
                     self._failed_count += 1
     
     def _flush_remaining(self):

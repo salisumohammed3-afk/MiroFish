@@ -1,19 +1,19 @@
 """
-Name normalization for Zep ontology types.
+Name normalization for knowledge map ontology types.
 
-Zep's API enforces two different naming rules (confirmed against the live API,
-June 2026):
-  - ENTITY type names must be PascalCase, alphanumeric only
-    (e.g. 'EntityType', 'UserProfile', 'APIKey')
-  - EDGE type names must be SCREAMING_SNAKE_CASE
-    (e.g. 'RELATES_TO', 'CREATED_BY')
+Forecast keeps two naming conventions (first required by Zep, kept for
+Graphiti so labels saved by older builds still match):
+  - ENTITY type names are PascalCase, alphanumeric only
+    (e.g. 'EntityType', 'UserProfile', 'APIKey'). Graphiti turns them into
+    Cypher labels, which must be plain identifiers.
+  - EDGE type names are SCREAMING_SNAKE_CASE (e.g. 'RELATES_TO', 'CREATED_BY')
   - An edge's source/target fields reference entity types, so they follow the
     PascalCase rule.
 
 The LLM does not reliably produce either convention, so everything that sends
-type names to Zep, or compares against labels stored by Zep, must pass them
-through these converters. Both are idempotent: a name already in the target
-convention passes through unchanged.
+type names to the graph, or compares against labels stored in it, must pass
+them through these converters. Both are idempotent: a name already in the
+target convention passes through unchanged.
 """
 
 import re
@@ -23,7 +23,7 @@ _ACRONYM_MAX_LEN = 4
 
 
 def to_pascal_case(name: str) -> str:
-    """Convert any type name to Zep-valid PascalCase.
+    """Convert any type name to label-safe PascalCase.
 
     'AI_Lab_Leader' -> 'AILabLeader' (short all-caps tokens kept when the name
     is mixed-case, so deliberate acronyms survive), 'INVESTS_IN' -> 'InvestsIn'
@@ -52,7 +52,7 @@ def to_pascal_case(name: str) -> str:
 
 
 def to_screaming_snake(name: str) -> str:
-    """Convert any edge type name to Zep-valid SCREAMING_SNAKE_CASE.
+    """Convert any edge type name to SCREAMING_SNAKE_CASE.
 
     'InvestsIn' -> 'INVESTS_IN', 'reports-on' -> 'REPORTS_ON',
     'INVESTS_IN' -> 'INVESTS_IN' (idempotent).

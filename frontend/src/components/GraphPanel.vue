@@ -200,6 +200,16 @@
         </div>
       </div>
       
+      <!-- Missing map (for example one built on the old Zep service) -->
+      <div v-else-if="missingMessage" class="graph-state graph-missing">
+        <p class="missing-title">This knowledge map needs rebuilding</p>
+        <p class="missing-text">{{ missingMessage }}</p>
+        <button v-if="rebuildable" class="rebuild-btn" :disabled="rebuilding" @click="emit('rebuild')">
+          {{ rebuilding ? 'Rebuilding the map...' : 'Rebuild the map' }}
+        </button>
+        <router-link v-else-if="projectLink" class="rebuild-btn" :to="projectLink">Open the project to rebuild it</router-link>
+      </div>
+
       <!-- Loading state -->
       <div v-else-if="loading" class="graph-state">
         <div class="loading-spinner"></div>
@@ -243,10 +253,14 @@ const props = defineProps({
   graphData: Object,
   loading: Boolean,
   currentPhase: Number,
-  isSimulating: Boolean
+  isSimulating: Boolean,
+  missingMessage: String,
+  rebuildable: Boolean,
+  rebuilding: Boolean,
+  projectLink: String
 })
 
-const emit = defineEmits(['refresh', 'toggle-maximize'])
+const emit = defineEmits(['refresh', 'toggle-maximize', 'rebuild'])
 
 const graphContainer = ref(null)
 const graphSvg = ref(null)
@@ -903,6 +917,41 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
   text-align: center;
   color: #999;
+}
+
+.graph-missing {
+  max-width: 420px;
+  color: #444;
+}
+
+.missing-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.missing-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.rebuild-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.rebuild-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .empty-icon {

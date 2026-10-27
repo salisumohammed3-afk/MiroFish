@@ -40,6 +40,8 @@
         <GraphPanel 
           :graphData="graphData"
           :loading="graphLoading"
+          :missingMessage="graphMissing"
+          :projectLink="projectData?.project_id ? `/process/${projectData.project_id}` : null"
           :currentPhase="2"
           @refresh="refreshGraph"
           @toggle-maximize="toggleMaximize('graph')"
@@ -68,7 +70,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import GraphPanel from '../components/GraphPanel.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
-import { getProject, getGraphData } from '../api/graph'
+import { getProject, getGraphData, graphMissingMessage } from '../api/graph'
 import { getSimulation, stopSimulation, getEnvStatus, closeSimulationEnv } from '../api/simulation'
 
 const route = useRoute()
@@ -87,6 +89,7 @@ const currentSimulationId = ref(route.params.simulationId)
 const projectData = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
+const graphMissing = ref(null)
 const systemLogs = ref([])
 const currentStatus = ref('processing') // processing | completed | error
 
@@ -253,7 +256,8 @@ const loadGraph = async (graphId) => {
       addLog('Graph data loaded successfully')
     }
   } catch (err) {
-    addLog(`Failed to load graph: ${err.message}`)
+    graphMissing.value = graphMissingMessage(err)
+    addLog(graphMissing.value ? 'This project\'s knowledge map is missing and needs rebuilding' : `Failed to load graph: ${err.message}`)
   } finally {
     graphLoading.value = false
   }

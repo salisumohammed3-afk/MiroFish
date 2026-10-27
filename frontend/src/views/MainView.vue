@@ -41,6 +41,10 @@
           :graphData="graphData"
           :loading="graphLoading"
           :currentPhase="currentPhase"
+          :missingMessage="graphMissing"
+          :rebuildable="true"
+          :rebuilding="rebuildingGraph"
+          @rebuild="rebuildGraph"
           @refresh="refreshGraph"
           @toggle-maximize="toggleMaximize('graph')"
         />
@@ -80,7 +84,7 @@ import { useRoute, useRouter } from 'vue-router'
 import GraphPanel from '../components/GraphPanel.vue'
 import Step1GraphBuild from '../components/Step1GraphBuild.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
-import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
+import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData, graphMissingMessage } from '../api/graph'
 import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
 
 const route = useRoute()
@@ -97,6 +101,8 @@ const stepNames = ['Graph Build', 'Environment Setup', 'Run Simulation', 'Genera
 const currentProjectId = ref(route.params.projectId)
 const loading = ref(false)
 const graphLoading = ref(false)
+const graphMissing = ref(null)
+const rebuildingGraph = ref(false)
 const error = ref('')
 const projectData = ref(null)
 const graphData = ref(null)
@@ -360,14 +366,46 @@ const loadGraph = async (graphId) => {
     const res = await getGraphData(graphId)
     if (res.success) {
       graphData.value = res.data
+      graphMissing.value = null
       addLog('Graph data loaded successfully.')
     } else {
       addLog(`Failed to load graph data: ${res.error}`)
     }
   } catch (e) {
-    addLog(`Exception loading graph: ${e.message}`)
+    const missing = graphMissingMessage(e)
+    if (missing) {
+      graphMissing.value = missing
+      graphData.value = null
+      addLog('This project\'s knowledge map is missing and needs rebuilding.')
+    } else {
+      addLog(`Exception loading graph: ${e.message}`)
+    }
   } finally {
     graphLoading.value = false
+  }
+}
+
+// Rebuild a project's map from its saved documents and ontology (used when the
+// map is missing, for example projects whose maps lived on the old Zep service)
+const rebuildGraph = async () => {
+  if (rebuildingGraph.value) return
+  rebuildingGraph.value = true
+  try {
+    addLog('Rebuilding the knowledge map from the project documents...')
+    const res = await buildGraph({ project_id: currentProjectId.value, force: true })
+    if (res.success) {
+      graphMissing.value = null
+      currentPhase.value = 1
+      buildProgress.value = { progress: 0, message: 'Starting build...' }
+      startGraphPolling()
+      startPollingTask(res.data.task_id)
+    } else {
+      addLog(`Error starting rebuild: ${res.error}`)
+    }
+  } catch (err) {
+    addLog(`Error starting rebuild: ${err.message}`)
+  } finally {
+    rebuildingGraph.value = false
   }
 }
 

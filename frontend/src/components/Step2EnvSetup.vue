@@ -640,6 +640,7 @@ import {
   getSimulationConfig,
   getSimulationConfigRealtime 
 } from '../api/simulation'
+import { graphMissingMessage } from '../api/graph'
 
 const props = defineProps({
   simulationId: String,  // passed from parent component
@@ -799,7 +800,7 @@ const startPrepareSimulation = async () => {
       // Set expected agent total immediately (from prepare API response)
       if (res.data.expected_entities_count) {
         expectedTotal.value = res.data.expected_entities_count
-        addLog(`Read ${res.data.expected_entities_count} entities from Zep graph`)
+        addLog(`Read ${res.data.expected_entities_count} entities from the knowledge map`)
         if (res.data.entity_types && res.data.entity_types.length > 0) {
           addLog(`  └─ Entity types: ${res.data.entity_types.join(', ')}`)
         }
@@ -815,7 +816,8 @@ const startPrepareSimulation = async () => {
       emit('update-status', 'error')
     }
   } catch (err) {
-    addLog(`Preparation error: ${err.message}`)
+    const missing = graphMissingMessage(err)
+    addLog(missing ? `Preparation stopped: ${missing}` : `Preparation error: ${err.message}`)
     emit('update-status', 'error')
   }
 }
