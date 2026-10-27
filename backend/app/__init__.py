@@ -43,7 +43,9 @@ def create_app(config_class=Config):
         logger.info("=" * 50)
     
     # Enable CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # (Not for /api/auth/hub-session: that answer carries a sign-in and is
+    # only for this product's own pages.)
+    CORS(app, resources={r"/api/(?!auth/hub-session).*": {"origins": "*"}})
     
     # Register simulation process cleanup function (ensure all simulation processes are terminated on server shutdown)
     from .services.simulation_runner import SimulationRunner

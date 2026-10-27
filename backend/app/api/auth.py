@@ -88,6 +88,68 @@ def change_password():
 
 
 # ──────────────────────────────────────────────
+# One sign-in through the hub
+# ──────────────────────────────────────────────
+
+def _profile_for_email(sb, email):
+    """This person's Forecast profile, matched on email, or None."""
+    like = email.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    rows = sb.table("user_profiles").select("id, email, is_active").ilike("email", like).execute().data or []
+    rows = [r for r in rows if (r.get("email") or "").strip().lower() == email]
+    return rows[0] if rows else None
+
+
+@auth_bp.route('/hub-session', methods=['GET'])
+def hub_session():
+    """
+    Turns the hub's pass (the HttpOnly cookie ls_pass on .langsync.ai) into a
+    Forecast session. The browser calls this on its own address, so the cookie
+    comes with it; the service key never leaves this server.
+
+    ?have=<email> is the email of the session the browser already holds. When
+    the pass is for that same person, nothing new is made.
+
+    Answers: 200 ok (same person, still allowed), 200 session (new tokens),
+    401 no-pass (send them to the hub), 403 not-in-use (the plain page),
+    503 error (could not check just now; never opens the door).
+    """
+    def answer(body, status=200):
+        res = jsonify(body)
+        res.status_code = status
+        res.headers["Cache-Control"] = "no-store"
+        return res
+
+    from ..utils.hub_pass import HUB_PRODUCT_ID, PASS_COOKIE, auth_user_email, mint_session, read_pass
+
+    p = read_pass(request.cookies.get(PASS_COOKIE))
+    if not p:
+        return answer({"state": "no-pass"}, 401)
+    if HUB_PRODUCT_ID not in p.products:
+        return answer({"state": "not-in-use"}, 403)
+
+    try:
+        sb = get_supabase_admin()
+        profile = _profile_for_email(sb, p.email)
+        if not profile or not profile.get("is_active", True):
+            return answer({"state": "not-in-use"}, 403)
+        # The sign-in account must already exist with this email. It is never
+        # created here: the hub's provisioning does that.
+        if auth_user_email(str(profile["id"])) != p.email:
+            return answer({"state": "not-in-use"}, 403)
+
+        have = (request.args.get("have") or "").strip().lower()
+        if have == p.email:
+            return answer({"state": "ok", "email": p.email, "exp": p.exp})
+
+        tokens = mint_session(p.email)
+    except Exception as e:
+        logger.error(f"hub session failed: {type(e).__name__}")
+        return answer({"state": "error"}, 503)
+
+    return answer({"state": "session", "email": p.email, "exp": p.exp, **tokens})
+
+
+# ──────────────────────────────────────────────
 # Company Management (super_admin only)
 # ──────────────────────────────────────────────
 

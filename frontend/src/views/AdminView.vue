@@ -293,8 +293,10 @@ const executeDelete = async () => {
 }
 
 const handleSignOut = async () => {
-  await signOut()
-  router.push('/login')
+  // On langsync.ai this goes on to the hub's sign-out, which signs out
+  // everywhere; elsewhere only the code form is left.
+  const away = await signOut()
+  if (!away) router.push('/login/code')
 }
 </script>
 

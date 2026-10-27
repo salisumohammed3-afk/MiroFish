@@ -7,6 +7,9 @@ import SimulationRunView from '../views/SimulationRunView.vue'
 import ReportView from '../views/ReportView.vue'
 import InteractionView from '../views/InteractionView.vue'
 import LoginView from '../views/LoginView.vue'
+import LoginHandOff from '../views/LoginHandOff.vue'
+import NotInUseView from '../views/NotInUseView.vue'
+import { startPassKeepAlive } from '../lib/hub'
 import AdminView from '../views/AdminView.vue'
 
 // Shown to staff while the hub's client lock is on for a client that has no
@@ -27,11 +30,24 @@ const routes = [
     component: NotAClient,
     meta: { requiresAuth: true }
   },
+  // Signing in happens at the hub: /login only hands over to it.
   {
     path: '/login',
     name: 'Login',
+    component: LoginHandOff
+  },
+  // The old emailed code form, at a hidden address until 3 Nov 2026.
+  {
+    path: '/login/code',
+    name: 'LoginCode',
     component: LoginView,
     meta: { guest: true }
+  },
+  // Signed into the hub, but Forecast is not theirs.
+  {
+    path: '/not-in-use',
+    name: 'NotInUse',
+    component: NotInUseView
   },
   {
     path: '/',
@@ -88,7 +104,8 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-  const { authState, isSuperAdmin, refreshProfile } = await import('../store/auth')
+  const { authState, isSuperAdmin, refreshProfile, ensureHubSession } = await import('../store/auth')
+  const { onLangsync } = await import('../lib/hub')
 
   // Wait for auth initialization
   if (!authState.initialized) {
@@ -100,6 +117,20 @@ router.beforeEach(async (to, from, next) => {
         }
       }, 50)
     })
+  }
+
+  // One sign-in: every page that needs a sign-in goes through the hub's pass
+  // first (store/auth.js ensureHubSession).
+  if (to.meta.requiresAuth) {
+    const door = await ensureHubSession(to.fullPath)
+    if (door === 'away') return next(false)
+    if (door === 'not-in-use') return next({ name: 'NotInUse' })
+    if (door === 'stuck') {
+      return onLangsync()
+        ? next({ name: 'Login', query: { stuck: '1', redirect: to.fullPath } })
+        : next({ name: 'LoginCode', query: { redirect: to.fullPath } })
+    }
+    if (door === 'error') return next({ name: 'Login', query: { error: '1', redirect: to.fullPath } })
   }
 
   const isLoggedIn = !!authState.session
@@ -136,3 +167,14 @@ router.beforeEach(async (to, from, next) => {
 })
 
 export default router
+
+// Keeps the hub pass fresh while a page is open, and checks it again when the
+// tab comes back into view: signed out in the hub (or removed there), and the
+// next look at Forecast goes back through the hub.
+startPassKeepAlive(async () => {
+  const { authState, ensureHubSession } = await import('../store/auth')
+  const route = router.currentRoute.value
+  if (!authState.session || !route.meta.requiresAuth) return
+  const door = await ensureHubSession(route.fullPath, { force: true })
+  if (door === 'not-in-use') router.replace({ name: 'NotInUse' })
+})
