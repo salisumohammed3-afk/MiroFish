@@ -35,6 +35,10 @@ dependencies = [
     # Utility libraries
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
+
+    # API keys: the /mcp endpoint for Claude and agents (the official MCP SDK,
+    # held on 1.x because camel-ai already uses it)
+    "mcp>=1.24.0,<2",
 ]
 
 [project.optional-dependencies]
