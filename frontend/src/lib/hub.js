@@ -83,12 +83,13 @@ export function startPassKeepAlive(onBack) {
   const url = hubPassUrl(`${window.location.origin}/icon.png`)
   const refresh = () => {
     last = Date.now()
-    fetch(url, { mode: 'no-cors', credentials: 'include', cache: 'no-store' }).catch(() => {})
+    return fetch(url, { mode: 'no-cors', credentials: 'include', cache: 'no-store' }).catch(() => {})
   }
   window.setInterval(refresh, EVERY)
-  const back = () => {
+  // Back in view: a fresh pass first (if due), then the check.
+  const back = async () => {
     if (document.visibilityState !== 'visible') return
-    if (Date.now() - last > EVERY / 2) refresh()
+    if (Date.now() - last > EVERY / 2) await refresh()
     onBack?.()
   }
   document.addEventListener('visibilitychange', back)

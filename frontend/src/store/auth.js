@@ -52,13 +52,15 @@ export async function initAuth() {
   state.loading = false
   state.initialized = true
 
-  supabase.auth.onAuthStateChange(async (_event, session) => {
+  // No awaiting inside this listener: supabase-js holds its sign-in lock
+  // while it calls listeners, and fetchProfile asks it for the session, so
+  // awaiting here would hang setSession forever. Do the work just after.
+  supabase.auth.onAuthStateChange((_event, session) => {
     state.session = session
-    if (session) {
-      await fetchProfile()
-    } else {
-      state.profile = null
-    }
+    setTimeout(() => {
+      if (session) fetchProfile()
+      else state.profile = null
+    }, 0)
   })
 }
 
