@@ -73,6 +73,13 @@ def create_app(config_class=Config):
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
     app.register_blueprint(report_bp, url_prefix='/api/report')
+
+    # API keys: other tools, Claude and agents. These check a LangSync API key
+    # instead of a sign-in (see utils/apiauth.py).
+    from .api.v1 import v1_bp
+    from .api.mcp_endpoint import mcp_bp
+    app.register_blueprint(v1_bp, url_prefix='/api/v1')
+    app.register_blueprint(mcp_bp)
     
     # Health check
     @app.route('/health')
