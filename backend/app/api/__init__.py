@@ -13,6 +13,7 @@ from . import graph  # noqa: E402, F401
 from . import simulation  # noqa: E402, F401
 from . import report  # noqa: E402, F401
 from . import auth  # noqa: E402, F401
+from . import api_keys  # noqa: E402, F401
 
 # Attach the auth + company-ownership guard to every data blueprint.
 # Done here (at blueprint definition time, before any app registers them) so the
