@@ -11,6 +11,15 @@ from openai import OpenAI
 from ..config import Config
 
 
+def strip_code_fences(text: Optional[str]) -> str:
+    """Remove a surrounding ```json (or bare ```) fence. Claude often adds one
+    even when asked for JSON only, which json.loads cannot read."""
+    cleaned = (text or "").strip()
+    cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+    return cleaned.strip()
+
+
 class LLMClient:
     """LLM Client"""
     

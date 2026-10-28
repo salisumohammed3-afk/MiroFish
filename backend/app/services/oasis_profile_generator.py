@@ -19,6 +19,7 @@ from openai import OpenAI
 
 from ..config import Config
 from ..utils.logger import get_logger
+from ..utils.llm_client import strip_code_fences
 from .zep_entity_reader import EntityNode, ZepEntityReader
 from . import graph_store
 
@@ -537,7 +538,7 @@ class OasisProfileGenerator:
                     # Not setting max_tokens, letting the LLM generate freely
                 )
                 
-                content = response.choices[0].message.content
+                content = strip_code_fences(response.choices[0].message.content)
                 
                 # Check if output was truncated (finish_reason is not 'stop')
                 finish_reason = response.choices[0].finish_reason

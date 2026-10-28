@@ -20,6 +20,7 @@ from openai import OpenAI
 
 from ..config import Config
 from ..utils.logger import get_logger
+from ..utils.llm_client import strip_code_fences
 from .zep_entity_reader import EntityNode, ZepEntityReader
 
 logger = get_logger('mirofish.simulation_config')
@@ -433,7 +434,7 @@ class SimulationConfigGenerator:
                     # Not setting max_tokens, letting the LLM generate freely
                 )
                 
-                content = response.choices[0].message.content
+                content = strip_code_fences(response.choices[0].message.content)
                 finish_reason = response.choices[0].finish_reason
                 
                 # Check if output was truncated
