@@ -7,7 +7,7 @@ changes need a read and change key.
 
 from flask import Blueprint, jsonify, request
 
-from ..services import public_api
+from ..services import health, public_api
 from ..services.public_api import PublicApiError
 from ..utils.apiauth import require_api_key
 from ..utils.logger import get_logger
@@ -39,6 +39,17 @@ def keyed(need):
         inner.__name__ = f.__name__
         return inner
     return wrap
+
+
+@v1_bp.route('/health', methods=['GET'])
+@keyed("read")
+def service_health(key):
+    """Whether each paid service and key Forecast runs on works. Read only, starts no paid work."""
+    try:
+        return jsonify(health.build_health()), 200
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"[forecast] health: {e}")
+        return jsonify({"error": "Something went wrong, please try again"}), 500
 
 
 @v1_bp.route('/companies', methods=['GET'])
